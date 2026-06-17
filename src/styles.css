@@ -4,14 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Cairo for Arabic UI */
-@font-face {
-  font-family: "Cairo";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("https://fonts.gstatic.com/s/cairo/v28/SLXgc1nY6HkvangtZmpQdkhzfH5lkSs2SgRjCAGMQ1z0hOA-W1ToLQ-HmkA.woff2") format("woff2");
-}
+/* Cairo Arabic font loaded via <link> in src/routes/__root.tsx head() */
 
 @theme inline {
   --font-sans: "Cairo", system-ui, -apple-system, "Segoe UI", sans-serif;
