@@ -12,6 +12,19 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated.users'
+import { Route as AuthenticatedTimetablesRouteImport } from './routes/_authenticated.timetables'
+import { Route as AuthenticatedStudentsRouteImport } from './routes/_authenticated.students'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated.reports'
+import { Route as AuthenticatedPrintRouteImport } from './routes/_authenticated.print'
+import { Route as AuthenticatedPredictorRouteImport } from './routes/_authenticated.predictor'
+import { Route as AuthenticatedLeavesRouteImport } from './routes/_authenticated.leaves'
+import { Route as AuthenticatedFacilitiesRouteImport } from './routes/_authenticated.facilities'
+import { Route as AuthenticatedCircularsRouteImport } from './routes/_authenticated.circulars'
+import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authenticated.attendance'
+import { Route as AuthenticatedStudentsImportRouteImport } from './routes/_authenticated.students.import'
+import { Route as AuthenticatedStudentsIdRouteImport } from './routes/_authenticated.students.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -27,27 +40,179 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedTimetablesRoute = AuthenticatedTimetablesRouteImport.update({
+  id: '/timetables',
+  path: '/timetables',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedStudentsRoute = AuthenticatedStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPrintRoute = AuthenticatedPrintRouteImport.update({
+  id: '/print',
+  path: '/print',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPredictorRoute = AuthenticatedPredictorRouteImport.update({
+  id: '/predictor',
+  path: '/predictor',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedLeavesRoute = AuthenticatedLeavesRouteImport.update({
+  id: '/leaves',
+  path: '/leaves',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedFacilitiesRoute = AuthenticatedFacilitiesRouteImport.update({
+  id: '/facilities',
+  path: '/facilities',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCircularsRoute = AuthenticatedCircularsRouteImport.update({
+  id: '/circulars',
+  path: '/circulars',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAttendanceRoute = AuthenticatedAttendanceRouteImport.update({
+  id: '/attendance',
+  path: '/attendance',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedStudentsImportRoute =
+  AuthenticatedStudentsImportRouteImport.update({
+    id: '/import',
+    path: '/import',
+    getParentRoute: () => AuthenticatedStudentsRoute,
+  } as any)
+const AuthenticatedStudentsIdRoute = AuthenticatedStudentsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedStudentsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/attendance': typeof AuthenticatedAttendanceRoute
+  '/circulars': typeof AuthenticatedCircularsRoute
+  '/facilities': typeof AuthenticatedFacilitiesRoute
+  '/leaves': typeof AuthenticatedLeavesRoute
+  '/predictor': typeof AuthenticatedPredictorRoute
+  '/print': typeof AuthenticatedPrintRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/students': typeof AuthenticatedStudentsRouteWithChildren
+  '/timetables': typeof AuthenticatedTimetablesRoute
+  '/users': typeof AuthenticatedUsersRoute
+  '/students/$id': typeof AuthenticatedStudentsIdRoute
+  '/students/import': typeof AuthenticatedStudentsImportRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/attendance': typeof AuthenticatedAttendanceRoute
+  '/circulars': typeof AuthenticatedCircularsRoute
+  '/facilities': typeof AuthenticatedFacilitiesRoute
+  '/leaves': typeof AuthenticatedLeavesRoute
+  '/predictor': typeof AuthenticatedPredictorRoute
+  '/print': typeof AuthenticatedPrintRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/students': typeof AuthenticatedStudentsRouteWithChildren
+  '/timetables': typeof AuthenticatedTimetablesRoute
+  '/users': typeof AuthenticatedUsersRoute
   '/': typeof AuthenticatedIndexRoute
+  '/students/$id': typeof AuthenticatedStudentsIdRoute
+  '/students/import': typeof AuthenticatedStudentsImportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/attendance': typeof AuthenticatedAttendanceRoute
+  '/_authenticated/circulars': typeof AuthenticatedCircularsRoute
+  '/_authenticated/facilities': typeof AuthenticatedFacilitiesRoute
+  '/_authenticated/leaves': typeof AuthenticatedLeavesRoute
+  '/_authenticated/predictor': typeof AuthenticatedPredictorRoute
+  '/_authenticated/print': typeof AuthenticatedPrintRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/students': typeof AuthenticatedStudentsRouteWithChildren
+  '/_authenticated/timetables': typeof AuthenticatedTimetablesRoute
+  '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/students/$id': typeof AuthenticatedStudentsIdRoute
+  '/_authenticated/students/import': typeof AuthenticatedStudentsImportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/attendance'
+    | '/circulars'
+    | '/facilities'
+    | '/leaves'
+    | '/predictor'
+    | '/print'
+    | '/reports'
+    | '/settings'
+    | '/students'
+    | '/timetables'
+    | '/users'
+    | '/students/$id'
+    | '/students/import'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/'
-  id: '__root__' | '/_authenticated' | '/auth' | '/_authenticated/'
+  to:
+    | '/auth'
+    | '/attendance'
+    | '/circulars'
+    | '/facilities'
+    | '/leaves'
+    | '/predictor'
+    | '/print'
+    | '/reports'
+    | '/settings'
+    | '/students'
+    | '/timetables'
+    | '/users'
+    | '/'
+    | '/students/$id'
+    | '/students/import'
+  id:
+    | '__root__'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/attendance'
+    | '/_authenticated/circulars'
+    | '/_authenticated/facilities'
+    | '/_authenticated/leaves'
+    | '/_authenticated/predictor'
+    | '/_authenticated/print'
+    | '/_authenticated/reports'
+    | '/_authenticated/settings'
+    | '/_authenticated/students'
+    | '/_authenticated/timetables'
+    | '/_authenticated/users'
+    | '/_authenticated/'
+    | '/_authenticated/students/$id'
+    | '/_authenticated/students/import'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -78,14 +243,142 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/users': {
+      id: '/_authenticated/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/timetables': {
+      id: '/_authenticated/timetables'
+      path: '/timetables'
+      fullPath: '/timetables'
+      preLoaderRoute: typeof AuthenticatedTimetablesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/students': {
+      id: '/_authenticated/students'
+      path: '/students'
+      fullPath: '/students'
+      preLoaderRoute: typeof AuthenticatedStudentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/print': {
+      id: '/_authenticated/print'
+      path: '/print'
+      fullPath: '/print'
+      preLoaderRoute: typeof AuthenticatedPrintRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/predictor': {
+      id: '/_authenticated/predictor'
+      path: '/predictor'
+      fullPath: '/predictor'
+      preLoaderRoute: typeof AuthenticatedPredictorRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/leaves': {
+      id: '/_authenticated/leaves'
+      path: '/leaves'
+      fullPath: '/leaves'
+      preLoaderRoute: typeof AuthenticatedLeavesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/facilities': {
+      id: '/_authenticated/facilities'
+      path: '/facilities'
+      fullPath: '/facilities'
+      preLoaderRoute: typeof AuthenticatedFacilitiesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/circulars': {
+      id: '/_authenticated/circulars'
+      path: '/circulars'
+      fullPath: '/circulars'
+      preLoaderRoute: typeof AuthenticatedCircularsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/attendance': {
+      id: '/_authenticated/attendance'
+      path: '/attendance'
+      fullPath: '/attendance'
+      preLoaderRoute: typeof AuthenticatedAttendanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/students/import': {
+      id: '/_authenticated/students/import'
+      path: '/import'
+      fullPath: '/students/import'
+      preLoaderRoute: typeof AuthenticatedStudentsImportRouteImport
+      parentRoute: typeof AuthenticatedStudentsRoute
+    }
+    '/_authenticated/students/$id': {
+      id: '/_authenticated/students/$id'
+      path: '/$id'
+      fullPath: '/students/$id'
+      preLoaderRoute: typeof AuthenticatedStudentsIdRouteImport
+      parentRoute: typeof AuthenticatedStudentsRoute
+    }
   }
 }
 
+interface AuthenticatedStudentsRouteChildren {
+  AuthenticatedStudentsIdRoute: typeof AuthenticatedStudentsIdRoute
+  AuthenticatedStudentsImportRoute: typeof AuthenticatedStudentsImportRoute
+}
+
+const AuthenticatedStudentsRouteChildren: AuthenticatedStudentsRouteChildren = {
+  AuthenticatedStudentsIdRoute: AuthenticatedStudentsIdRoute,
+  AuthenticatedStudentsImportRoute: AuthenticatedStudentsImportRoute,
+}
+
+const AuthenticatedStudentsRouteWithChildren =
+  AuthenticatedStudentsRoute._addFileChildren(
+    AuthenticatedStudentsRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
+  AuthenticatedAttendanceRoute: typeof AuthenticatedAttendanceRoute
+  AuthenticatedCircularsRoute: typeof AuthenticatedCircularsRoute
+  AuthenticatedFacilitiesRoute: typeof AuthenticatedFacilitiesRoute
+  AuthenticatedLeavesRoute: typeof AuthenticatedLeavesRoute
+  AuthenticatedPredictorRoute: typeof AuthenticatedPredictorRoute
+  AuthenticatedPrintRoute: typeof AuthenticatedPrintRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRouteWithChildren
+  AuthenticatedTimetablesRoute: typeof AuthenticatedTimetablesRoute
+  AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAttendanceRoute: AuthenticatedAttendanceRoute,
+  AuthenticatedCircularsRoute: AuthenticatedCircularsRoute,
+  AuthenticatedFacilitiesRoute: AuthenticatedFacilitiesRoute,
+  AuthenticatedLeavesRoute: AuthenticatedLeavesRoute,
+  AuthenticatedPredictorRoute: AuthenticatedPredictorRoute,
+  AuthenticatedPrintRoute: AuthenticatedPrintRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedStudentsRoute: AuthenticatedStudentsRouteWithChildren,
+  AuthenticatedTimetablesRoute: AuthenticatedTimetablesRoute,
+  AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
