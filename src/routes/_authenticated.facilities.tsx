@@ -33,9 +33,12 @@ function FacilitiesPage() {
   const bookings = useQuery({
     queryKey: ["bookings"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("resource_bookings").select("*, profiles!resource_bookings_employee_id_fkey(full_name)").order("booking_date", { ascending: false }).limit(200);
+      const { data, error } = await supabase.from("resource_bookings").select("*").order("booking_date", { ascending: false }).limit(200);
       if (error) throw error;
-      return data;
+      const ids = Array.from(new Set(data.map((r) => r.employee_id)));
+      const profiles = ids.length ? (await supabase.from("profiles").select("id, full_name").in("id", ids)).data ?? [] : [];
+      const nameMap = new Map(profiles.map((p) => [p.id, p.full_name]));
+      return data.map((r) => ({ ...r, employee_name: nameMap.get(r.employee_id) ?? null }));
     },
   });
 
