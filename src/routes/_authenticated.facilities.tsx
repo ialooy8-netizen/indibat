@@ -70,7 +70,7 @@ function FacilitiesPage() {
           <div key={r.id} className="glass rounded-xl p-4 flex flex-wrap items-center gap-3">
             <div className="flex-1 min-w-[200px]">
               <div className="font-semibold">{r.resource}</div>
-              <div className="text-xs text-muted-foreground">{(r.profiles as { full_name: string | null } | null)?.full_name ?? "—"} · {r.booking_date} · {r.period}</div>
+              <div className="text-xs text-muted-foreground">{r.employee_name ?? "—"} · {r.booking_date} · {r.period}</div>
             </div>
             <span className={`text-xs px-2 py-1 rounded-full ${r.status === "approved" ? "bg-success/20 text-success" : r.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"}`}>
               {{ pending: "بانتظار", approved: "معتمد", rejected: "مرفوض" }[r.status]}
