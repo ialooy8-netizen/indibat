@@ -24,9 +24,12 @@ function PrintPage() {
   const list = useQuery({
     queryKey: ["prints"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("print_requests").select("*, profiles!print_requests_employee_id_fkey(full_name)").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("print_requests").select("*").order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      const ids = Array.from(new Set(data.map((r) => r.employee_id)));
+      const profiles = ids.length ? (await supabase.from("profiles").select("id, full_name").in("id", ids)).data ?? [] : [];
+      const nameMap = new Map(profiles.map((p) => [p.id, p.full_name]));
+      return data.map((r) => ({ ...r, employee_name: nameMap.get(r.employee_id) ?? null }));
     },
   });
 
