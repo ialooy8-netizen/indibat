@@ -61,7 +61,7 @@ function LeavesPage() {
         {list.data?.map((r) => (
           <div key={r.id} className="glass rounded-xl p-4 flex flex-wrap items-center gap-3">
             <div className="flex-1 min-w-[200px]">
-              <div className="font-semibold">{(r.profiles as { full_name: string | null } | null)?.full_name ?? "—"}</div>
+              <div className="font-semibold">{r.employee_name ?? "—"}</div>
               <div className="text-sm text-muted-foreground">{r.reason}</div>
               <div className="text-xs text-muted-foreground mt-1">{r.start_date} → {r.end_date}</div>
             </div>
