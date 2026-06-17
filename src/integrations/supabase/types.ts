@@ -14,16 +14,474 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      attendance: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          note: string | null
+          period: number
+          recorded_by: string | null
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          note?: string | null
+          period?: number
+          recorded_by?: string | null
+          status: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          period?: number
+          recorded_by?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      behavior_incidents: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          note: string | null
+          points: number
+          severity: string | null
+          student_id: string
+          teacher_id: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          points: number
+          severity?: string | null
+          student_id: string
+          teacher_id?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          note?: string | null
+          points?: number
+          severity?: string | null
+          student_id?: string
+          teacher_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "behavior_incidents_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      circulars: {
+        Row: {
+          body: string | null
+          created_at: string
+          file_url: string | null
+          id: string
+          posted_by: string | null
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          posted_by?: string | null
+          title: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          posted_by?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      classes: {
+        Row: {
+          created_at: string
+          grade: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grade?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grade?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      facility_config: {
+        Row: {
+          id: number
+          periods_per_day: number
+          resources: string[]
+          updated_at: string
+          working_days: string[]
+        }
+        Insert: {
+          id?: number
+          periods_per_day?: number
+          resources?: string[]
+          updated_at?: string
+          working_days?: string[]
+        }
+        Update: {
+          id?: number
+          periods_per_day?: number
+          resources?: string[]
+          updated_at?: string
+          working_days?: string[]
+        }
+        Relationships: []
+      }
+      leave_requests: {
+        Row: {
+          created_at: string
+          employee_id: string
+          end_date: string
+          id: string
+          reason: string
+          review_note: string | null
+          reviewer_id: string | null
+          start_date: string
+          status: string
+          unseen_admin: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          end_date: string
+          id?: string
+          reason: string
+          review_note?: string | null
+          reviewer_id?: string | null
+          start_date: string
+          status?: string
+          unseen_admin?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          end_date?: string
+          id?: string
+          reason?: string
+          review_note?: string | null
+          reviewer_id?: string | null
+          start_date?: string
+          status?: string
+          unseen_admin?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      parent_comms_log: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          sender_id: string | null
+          student_id: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          sender_id?: string | null
+          student_id?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          sender_id?: string | null
+          student_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_comms_log_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_requests: {
+        Row: {
+          copies: number
+          created_at: string
+          employee_id: string
+          file_url: string | null
+          id: string
+          notes: string | null
+          status: string
+          title: string
+          unseen_admin: boolean
+          updated_at: string
+        }
+        Insert: {
+          copies?: number
+          created_at?: string
+          employee_id: string
+          file_url?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          title: string
+          unseen_admin?: boolean
+          updated_at?: string
+        }
+        Update: {
+          copies?: number
+          created_at?: string
+          employee_id?: string
+          file_url?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          title?: string
+          unseen_admin?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      resource_bookings: {
+        Row: {
+          booking_date: string
+          created_at: string
+          day_label: string | null
+          employee_id: string
+          id: string
+          note: string | null
+          period: string
+          resource: string
+          status: string
+          unseen_admin: boolean
+          updated_at: string
+        }
+        Insert: {
+          booking_date: string
+          created_at?: string
+          day_label?: string | null
+          employee_id: string
+          id?: string
+          note?: string | null
+          period: string
+          resource: string
+          status?: string
+          unseen_admin?: boolean
+          updated_at?: string
+        }
+        Update: {
+          booking_date?: string
+          created_at?: string
+          day_label?: string | null
+          employee_id?: string
+          id?: string
+          note?: string | null
+          period?: string
+          resource?: string
+          status?: string
+          unseen_admin?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      students: {
+        Row: {
+          behavior_points: number
+          class_id: string | null
+          created_at: string
+          gender: string | null
+          id: string
+          name: string
+          national_id: string | null
+          notes: string | null
+          parent_name: string | null
+          parent_phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          behavior_points?: number
+          class_id?: string | null
+          created_at?: string
+          gender?: string | null
+          id?: string
+          name: string
+          national_id?: string | null
+          notes?: string | null
+          parent_name?: string | null
+          parent_phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          behavior_points?: number
+          class_id?: string | null
+          created_at?: string
+          gender?: string | null
+          id?: string
+          name?: string
+          national_id?: string | null
+          notes?: string | null
+          parent_name?: string | null
+          parent_phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timetables: {
+        Row: {
+          created_at: string
+          file_url: string | null
+          id: string
+          payload: Json
+          ref_id: string | null
+          scope: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          payload?: Json
+          ref_id?: string | null
+          scope: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          payload?: Json
+          ref_id?: string | null
+          scope?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "master" | "principal" | "teacher" | "print_manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +608,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["master", "principal", "teacher", "print_manager"],
+    },
   },
 } as const
