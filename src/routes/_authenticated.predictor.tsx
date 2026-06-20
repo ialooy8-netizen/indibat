@@ -8,6 +8,12 @@ export const Route = createFileRoute("/_authenticated/predictor")({
   component: PredictorPage,
 });
 
+function severity(points: number) {
+  if (points < 40) return { label: "حرج", chip: "bg-destructive/20 text-destructive" };
+  if (points < 60) return { label: "عالي", chip: "bg-warning/20 text-warning" };
+  return { label: "متوسط", chip: "bg-warning/10 text-warning" };
+}
+
 function PredictorPage() {
   const atRisk = useQuery({
     queryKey: ["at-risk"],
@@ -30,7 +36,9 @@ function PredictorPage() {
         <p className="text-muted-foreground text-sm mt-1">طلاب تحت خط الإنذار (نقاط السلوك أقل من 70)</p>
       </div>
 
-      {atRisk.data?.length === 0 && (
+      {atRisk.isLoading && <div className="glass rounded-2xl p-10 text-center text-muted-foreground">جاري التحليل...</div>}
+
+      {!atRisk.isLoading && atRisk.data?.length === 0 && (
         <div className="glass rounded-2xl p-10 text-center text-muted-foreground">
           🎉 لا يوجد طلاب في منطقة الخطر حالياً.
         </div>
@@ -38,8 +46,7 @@ function PredictorPage() {
 
       <div className="space-y-3">
         {atRisk.data?.map((s) => {
-          const sev = s.behavior_points < 40 ? "حرج" : s.behavior_points < 60 ? "عالي" : "متوسط";
-          const sevColor = s.behavior_points < 40 ? "destructive" : s.behavior_points < 60 ? "warning" : "warning";
+          const sev = severity(s.behavior_points);
           const msg = `السلام عليكم، نود إعلامكم بأن مستوى السلوك لدى الطالب ${s.name} يستدعي الاهتمام. نرجو التواصل مع إدارة المدرسة.`;
           const wa = s.parent_phone ? `https://wa.me/${s.parent_phone.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}` : null;
           return (
@@ -48,7 +55,7 @@ function PredictorPage() {
                 <Link to="/students/$id" params={{ id: s.id }} className="font-semibold hover:text-primary">{s.name}</Link>
                 <p className="text-xs text-muted-foreground">{(s.classes as { name: string } | null)?.name ?? ""}</p>
               </div>
-              <div className={`text-xs font-bold px-3 py-1 rounded-full bg-${sevColor}/20 text-${sevColor}`}>{sev}</div>
+              <div className={`text-xs font-bold px-3 py-1 rounded-full ${sev.chip}`}>{sev.label}</div>
               <div className="text-2xl font-bold tabular-nums">{s.behavior_points}</div>
               {wa && (
                 <a href={wa} target="_blank" rel="noreferrer">

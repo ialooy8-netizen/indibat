@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,7 +17,6 @@ export const Route = createFileRoute("/_authenticated/facilities")({
 });
 
 function FacilitiesPage() {
-  const { user } = useAuth();
   const { isAdmin } = useRoles();
   const qc = useQueryClient();
 
@@ -42,9 +41,12 @@ function FacilitiesPage() {
     },
   });
 
-  if (isAdmin && bookings.data?.some((r) => r.unseen_admin)) {
-    supabase.from("resource_bookings").update({ unseen_admin: false }).eq("unseen_admin", true).then(() => qc.invalidateQueries({ queryKey: ["badge-counts"] }));
-  }
+  useEffect(() => {
+    if (!isAdmin || !bookings.data) return;
+    if (!bookings.data.some((r) => r.unseen_admin)) return;
+    supabase.from("resource_bookings").update({ unseen_admin: false }).eq("unseen_admin", true)
+      .then(() => qc.invalidateQueries({ queryKey: ["badge-counts"] }));
+  }, [isAdmin, bookings.data, qc]);
 
   const review = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" }) => {
@@ -112,7 +114,10 @@ function NewBookingDialog({ resources, periods, onSaved }: { resources: string[]
           <div><Label>المرفق</Label>
             <Select value={resource} onValueChange={setResource}>
               <SelectTrigger><SelectValue placeholder="اختر" /></SelectTrigger>
-              <SelectContent>{resources.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+              <SelectContent>
+                {resources.length === 0 && <div className="p-2 text-sm text-muted-foreground">لا توجد مرافق — أضفها من الإعدادات</div>}
+                {resources.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              </SelectContent>
             </Select>
           </div>
           <div><Label>التاريخ</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>

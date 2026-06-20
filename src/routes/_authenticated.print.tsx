@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,9 +33,12 @@ function PrintPage() {
     },
   });
 
-  if (canReview && list.data?.some((r) => r.unseen_admin)) {
-    supabase.from("print_requests").update({ unseen_admin: false }).eq("unseen_admin", true).then(() => qc.invalidateQueries({ queryKey: ["badge-counts"] }));
-  }
+  useEffect(() => {
+    if (!canReview || !list.data) return;
+    if (!list.data.some((r) => r.unseen_admin)) return;
+    supabase.from("print_requests").update({ unseen_admin: false }).eq("unseen_admin", true)
+      .then(() => qc.invalidateQueries({ queryKey: ["badge-counts"] }));
+  }, [canReview, list.data, qc]);
 
   const review = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: "approved" | "printed" | "rejected" }) => {
