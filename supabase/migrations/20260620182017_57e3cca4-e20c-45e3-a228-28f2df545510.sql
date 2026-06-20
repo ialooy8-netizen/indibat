@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS timetables_scope_ref_unique ON public.timetables (scope, ref_id);
