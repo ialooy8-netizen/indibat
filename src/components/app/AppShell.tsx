@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useRealtimeBadges } from "@/hooks/useRealtimeBadges";
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }>; badge?: "leaves" | "prints" | "bookings" };
 
@@ -79,6 +80,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const role: AppRole | null = roles[0] ?? null;
   const navItems = role ? NAV_BY_ROLE[role] : [];
   const badges = useBadgeCounts(isAdmin);
+  useRealtimeBadges(isAdmin);
 
   async function signOut() {
     await supabase.auth.signOut();
