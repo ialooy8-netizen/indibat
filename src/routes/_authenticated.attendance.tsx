@@ -141,7 +141,12 @@ function AttendancePage() {
         </Select>
       </div>
 
-      {!classId && <div className="glass rounded-2xl p-10 text-center text-muted-foreground">اختر الصف لعرض قائمة الطلاب</div>}
+      {!classId && classes.data && classes.data.length === 0 && (
+        <div className="glass rounded-2xl p-10 text-center text-muted-foreground">
+          {isTeacher && !isAdmin ? "لم يتم تعيين أي صف لك بعد. يرجى مراجعة الإدارة." : "لا توجد صفوف بعد."}
+        </div>
+      )}
+      {!classId && classes.data && classes.data.length > 0 && <div className="glass rounded-2xl p-10 text-center text-muted-foreground">اختر الصف لعرض قائمة الطلاب</div>}
 
       {classId && students.data && students.data.length > 0 && (
         <>
