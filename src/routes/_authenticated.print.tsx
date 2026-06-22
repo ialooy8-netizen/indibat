@@ -8,15 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Printer, Plus, Check, X } from "lucide-react";
+import { Printer, Plus, Check, X, Paperclip, FileDown } from "lucide-react";
 import { toast } from "sonner";
+import { uploadAttachment, getAttachmentUrl } from "@/lib/storage";
 
 export const Route = createFileRoute("/_authenticated/print")({
   component: PrintPage,
 });
 
 function PrintPage() {
-  const { user } = useAuth();
   const { isAdmin, isPrintManager } = useRoles();
   const canReview = isAdmin || isPrintManager;
   const qc = useQueryClient();
@@ -48,6 +48,15 @@ function PrintPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["prints"] }); toast.success("تم"); },
   });
 
+  async function openAttachment(path: string) {
+    try {
+      const url = await getAttachmentUrl(path);
+      window.open(url, "_blank");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -59,7 +68,14 @@ function PrintPage() {
         {list.data?.map((r) => (
           <div key={r.id} className="glass rounded-xl p-4 flex flex-wrap items-center gap-3">
             <div className="flex-1 min-w-[200px]">
-              <div className="font-semibold">{r.title}</div>
+              <div className="font-semibold flex items-center gap-2">
+                {r.title}
+                {r.attachment_path && (
+                  <button onClick={() => openAttachment(r.attachment_path!)} className="text-primary hover:underline text-xs inline-flex items-center gap-1">
+                    <FileDown className="h-3 w-3" /> الملف
+                  </button>
+                )}
+              </div>
               <div className="text-xs text-muted-foreground">{r.employee_name ?? "—"} · {r.copies} نسخة</div>
             </div>
             <span className={`text-xs px-2 py-1 rounded-full ${r.status === "printed" ? "bg-success/20 text-success" : r.status === "approved" ? "bg-primary/20 text-primary" : r.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"}`}>
@@ -85,12 +101,15 @@ function NewPrintDialog({ onSaved }: { onSaved: () => void }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [copies, setCopies] = useState(1);
+  const [file, setFile] = useState<File | null>(null);
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("print_requests").insert({ employee_id: user!.id, title, copies });
+      let attachment_path: string | null = null;
+      if (file) attachment_path = await uploadAttachment(file, "print");
+      const { error } = await supabase.from("print_requests").insert({ employee_id: user!.id, title, copies, attachment_path });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("تم"); setOpen(false); setTitle(""); setCopies(1); onSaved(); },
+    onSuccess: () => { toast.success("تم الإرسال"); setOpen(false); setTitle(""); setCopies(1); setFile(null); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
   });
   return (
@@ -101,7 +120,14 @@ function NewPrintDialog({ onSaved }: { onSaved: () => void }) {
         <div className="space-y-3">
           <div><Label>عنوان المستند</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
           <div><Label>عدد النسخ</Label><Input type="number" min={1} value={copies} onChange={(e) => setCopies(Number(e.target.value))} /></div>
-          <Button onClick={() => save.mutate()} disabled={!title || save.isPending} className="w-full gradient-primary text-primary-foreground">إرسال</Button>
+          <div>
+            <Label className="flex items-center gap-1"><Paperclip className="h-4 w-4" /> الملف (PDF أو صورة)</Label>
+            <Input type="file" accept=".pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            {file && <p className="text-xs text-muted-foreground mt-1 truncate">{file.name}</p>}
+          </div>
+          <Button onClick={() => save.mutate()} disabled={!title || save.isPending} className="w-full gradient-primary text-primary-foreground">
+            {save.isPending ? "جاري الرفع..." : "إرسال"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

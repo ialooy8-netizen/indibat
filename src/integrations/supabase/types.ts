@@ -60,6 +60,7 @@ export type Database = {
       }
       behavior_incidents: {
         Row: {
+          ai_draft: string | null
           created_at: string
           date: string
           id: string
@@ -71,6 +72,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          ai_draft?: string | null
           created_at?: string
           date?: string
           id?: string
@@ -82,6 +84,7 @@ export type Database = {
           type: string
         }
         Update: {
+          ai_draft?: string | null
           created_at?: string
           date?: string
           id?: string
@@ -104,6 +107,7 @@ export type Database = {
       }
       circulars: {
         Row: {
+          attachment_path: string | null
           body: string | null
           created_at: string
           file_url: string | null
@@ -112,6 +116,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          attachment_path?: string | null
           body?: string | null
           created_at?: string
           file_url?: string | null
@@ -120,6 +125,7 @@ export type Database = {
           title: string
         }
         Update: {
+          attachment_path?: string | null
           body?: string | null
           created_at?: string
           file_url?: string | null
@@ -128,6 +134,35 @@ export type Database = {
           title?: string
         }
         Relationships: []
+      }
+      class_teachers: {
+        Row: {
+          class_id: string
+          created_at: string
+          id: string
+          teacher_id: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          id?: string
+          teacher_id: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_teachers_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       classes: {
         Row: {
@@ -256,6 +291,7 @@ export type Database = {
       }
       print_requests: {
         Row: {
+          attachment_path: string | null
           copies: number
           created_at: string
           employee_id: string
@@ -268,6 +304,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attachment_path?: string | null
           copies?: number
           created_at?: string
           employee_id: string
@@ -280,6 +317,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attachment_path?: string | null
           copies?: number
           created_at?: string
           employee_id?: string
