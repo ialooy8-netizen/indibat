@@ -5,7 +5,7 @@ import { useAuth } from "./useAuth";
 export type AppRole = "master" | "principal" | "teacher" | "print_manager";
 
 export function useRoles() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const query = useQuery({
     queryKey: ["roles", user?.id],
     enabled: !!user,
@@ -21,7 +21,7 @@ export function useRoles() {
   const roles = query.data ?? [];
   return {
     roles,
-    loading: query.isLoading,
+    loading: authLoading || (!!user && query.isPending),
     isMaster: roles.includes("master"),
     isPrincipal: roles.includes("principal"),
     isTeacher: roles.includes("teacher"),
