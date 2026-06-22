@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useRoles } from "@/hooks/useRoles";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/_authenticated/attendance")({
 
 function AttendancePage() {
   const { user } = useAuth();
+  const { isAdmin, isTeacher } = useRoles();
   const qc = useQueryClient();
   const [classId, setClassId] = useState<string>("");
   const today = new Date().toISOString().slice(0, 10);
@@ -23,11 +25,28 @@ function AttendancePage() {
   const [modal, setModal] = useState<{ studentId: string; name: string } | null>(null);
 
   const classes = useQuery({
-    queryKey: ["classes"],
+    queryKey: ["classes-scoped", user?.id, isAdmin, isTeacher],
+    enabled: !!user,
     queryFn: async () => {
-      const { data, error } = await supabase.from("classes").select("*").order("name");
-      if (error) throw error;
-      return data;
+      // Admins see all classes. Pure teachers only see classes assigned to them.
+      if (isAdmin) {
+        const { data, error } = await supabase.from("classes").select("*").order("name");
+        if (error) throw error;
+        return data;
+      }
+      if (isTeacher) {
+        const { data, error } = await supabase
+          .from("class_teachers")
+          .select("classes(*)")
+          .eq("teacher_id", user!.id);
+        if (error) throw error;
+        const rows = (data ?? [])
+          .map((r) => (r as { classes: { id: string; name: string } | null }).classes)
+          .filter((c): c is { id: string; name: string } => !!c);
+        rows.sort((a, b) => a.name.localeCompare(b.name, "ar"));
+        return rows;
+      }
+      return [];
     },
   });
 
