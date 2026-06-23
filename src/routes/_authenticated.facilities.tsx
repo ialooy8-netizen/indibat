@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Building2, Plus, Check, X } from "lucide-react";
+import { Building2, Plus, Trash2, CalendarDays, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/facilities")({
@@ -17,6 +17,7 @@ export const Route = createFileRoute("/_authenticated/facilities")({
 });
 
 function FacilitiesPage() {
+  const { user } = useAuth();
   const { isAdmin } = useRoles();
   const qc = useQueryClient();
 
@@ -41,25 +42,20 @@ function FacilitiesPage() {
     },
   });
 
-  useEffect(() => {
-    if (!isAdmin || !bookings.data) return;
-    if (!bookings.data.some((r) => r.unseen_admin)) return;
-    supabase.from("resource_bookings").update({ unseen_admin: false }).eq("unseen_admin", true)
-      .then(() => qc.invalidateQueries({ queryKey: ["badge-counts"] }));
-  }, [isAdmin, bookings.data, qc]);
-
-  const review = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" }) => {
-      const { error } = await supabase.from("resource_bookings").update({ status }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["bookings"] }); toast.success("تم"); },
+  const del = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from("resource_bookings").delete().eq("id", id); if (error) throw error; },
+    onSuccess: () => { toast.success("تم حذف الحجز"); qc.invalidateQueries({ queryKey: ["bookings"] }); },
   });
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-3xl font-bold flex items-center gap-2"><Building2 className="h-7 w-7 text-primary" /> حجز المرافق</h2>
+        <div>
+          <h2 className="text-3xl font-bold flex items-center gap-2"><Building2 className="h-7 w-7 text-primary" /> {isAdmin ? "حجوزات المرافق" : "حجز المرافق"}</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isAdmin ? "نظرة عامة على جميع الحجوزات. الحجز فوري لا يحتاج اعتماد." : "احجز مرفقاً متاحاً مباشرة — لا اعتماد مطلوب."}
+          </p>
+        </div>
         <NewBookingDialog
           resources={config.data?.resources ?? []}
           periods={config.data?.periods_per_day ?? 7}
@@ -70,18 +66,19 @@ function FacilitiesPage() {
       <div className="space-y-2">
         {bookings.data?.map((r) => (
           <div key={r.id} className="glass rounded-xl p-4 flex flex-wrap items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
             <div className="flex-1 min-w-[200px]">
-              <div className="font-semibold">{r.resource}</div>
-              <div className="text-xs text-muted-foreground">{r.employee_name ?? "—"} · {r.booking_date} · {r.period}</div>
-            </div>
-            <span className={`text-xs px-2 py-1 rounded-full ${r.status === "approved" ? "bg-success/20 text-success" : r.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"}`}>
-              {{ pending: "بانتظار", approved: "معتمد", rejected: "مرفوض" }[r.status]}
-            </span>
-            {isAdmin && r.status === "pending" && (
-              <div className="flex gap-1">
-                <Button size="sm" onClick={() => review.mutate({ id: r.id, status: "approved" })} className="bg-success text-success-foreground"><Check className="h-4 w-4" /></Button>
-                <Button size="sm" onClick={() => review.mutate({ id: r.id, status: "rejected" })} className="bg-destructive text-destructive-foreground"><X className="h-4 w-4" /></Button>
+              <div className="font-semibold flex items-center gap-2">
+                {r.resource}
+                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/15 text-primary">{r.period}</span>
               </div>
+              <div className="text-xs text-muted-foreground flex items-center gap-2"><CalendarDays className="h-3 w-3" /> {r.booking_date} · {r.employee_name ?? "—"}</div>
+              {r.note && <div className="text-xs text-muted-foreground mt-1">{r.note}</div>}
+            </div>
+            {(isAdmin || r.employee_id === user?.id) && (
+              <Button size="sm" variant="ghost" onClick={() => { if (confirm("حذف هذا الحجز؟")) del.mutate(r.id); }}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
             )}
           </div>
         ))}
@@ -97,12 +94,15 @@ function NewBookingDialog({ resources, periods, onSaved }: { resources: string[]
   const [resource, setResource] = useState("");
   const [date, setDate] = useState("");
   const [period, setPeriod] = useState("");
+  const [note, setNote] = useState("");
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("resource_bookings").insert({ employee_id: user!.id, resource, booking_date: date, period });
+      const { error } = await supabase.from("resource_bookings").insert({
+        employee_id: user!.id, resource, booking_date: date, period, note: note || null, status: "approved",
+      });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("تم الحجز"); setOpen(false); setResource(""); setDate(""); setPeriod(""); onSaved(); },
+    onSuccess: () => { toast.success("تم الحجز"); setOpen(false); setResource(""); setDate(""); setPeriod(""); setNote(""); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
   });
   return (
@@ -127,7 +127,10 @@ function NewBookingDialog({ resources, periods, onSaved }: { resources: string[]
               <SelectContent>{Array.from({ length: periods }, (_, i) => i + 1).map((p) => <SelectItem key={p} value={`الحصة ${p}`}>الحصة {p}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <Button onClick={() => save.mutate()} disabled={!resource || !date || !period || save.isPending} className="w-full gradient-primary text-primary-foreground">إرسال</Button>
+          <div><Label>ملاحظة (اختياري)</Label><Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="نشاط، صف..." /></div>
+          <Button onClick={() => save.mutate()} disabled={!resource || !date || !period || save.isPending} className="w-full gradient-primary text-primary-foreground">
+            تأكيد الحجز
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

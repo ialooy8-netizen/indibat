@@ -17,6 +17,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -38,16 +39,19 @@ function AuthPage() {
   async function signUp(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
+    const { data, error } = await supabase.auth.signUp({
+      email, password,
       options: {
         emailRedirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
         data: { full_name: fullName },
       },
     });
+    if (error) { setBusy(false); return toast.error(error.message); }
+    // Save phone on the profile (trigger only sets name/email)
+    if (data.user && phone) {
+      await supabase.from("profiles").update({ phone }).eq("id", data.user.id);
+    }
     setBusy(false);
-    if (error) return toast.error(error.message);
     toast.success("تم إنشاء الحساب. سيقوم الماستر بتعيين دورك.");
     navigate({ to: "/" });
   }
@@ -67,14 +71,8 @@ function AuthPage() {
             </TabsList>
             <TabsContent value="signin">
               <form onSubmit={signIn} className="space-y-4">
-                <div>
-                  <Label>البريد الإلكتروني</Label>
-                  <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
-                </div>
-                <div>
-                  <Label>كلمة المرور</Label>
-                  <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" />
-                </div>
+                <div><Label>البريد الإلكتروني</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" /></div>
+                <div><Label>كلمة المرور</Label><Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" /></div>
                 <Button type="submit" disabled={busy} className="w-full gradient-primary text-primary-foreground font-semibold">
                   {busy ? "جاري الدخول..." : "تسجيل الدخول"}
                 </Button>
@@ -82,18 +80,10 @@ function AuthPage() {
             </TabsContent>
             <TabsContent value="signup">
               <form onSubmit={signUp} className="space-y-4">
-                <div>
-                  <Label>الاسم الكامل</Label>
-                  <Input required value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                </div>
-                <div>
-                  <Label>البريد الإلكتروني (الوزاري)</Label>
-                  <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" />
-                </div>
-                <div>
-                  <Label>كلمة المرور</Label>
-                  <Input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" />
-                </div>
+                <div><Label>الاسم الكامل</Label><Input required value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
+                <div><Label>البريد الإلكتروني (الوزاري)</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} dir="ltr" /></div>
+                <div><Label>رقم الجوال</Label><Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" placeholder="9665XXXXXXXX" /></div>
+                <div><Label>كلمة المرور</Label><Input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} dir="ltr" /></div>
                 <Button type="submit" disabled={busy} className="w-full gradient-primary text-primary-foreground font-semibold">
                   {busy ? "..." : "إنشاء الحساب"}
                 </Button>

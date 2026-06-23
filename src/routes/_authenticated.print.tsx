@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Printer, Plus, Check, X, Paperclip, FileDown } from "lucide-react";
+import { Printer, Plus, Check, X, Paperclip, FileDown, Lock, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { uploadAttachment, getAttachmentUrl } from "@/lib/storage";
 
@@ -16,9 +16,17 @@ export const Route = createFileRoute("/_authenticated/print")({
   component: PrintPage,
 });
 
+const STATUS_LABEL: Record<string, string> = {
+  pending: "بانتظار الطباعة",
+  pending_principal: "بانتظار اعتماد المدير",
+  approved: "معتمد",
+  printed: "تمت الطباعة",
+  rejected: "مرفوض",
+};
+
 function PrintPage() {
+  const { user } = useAuth();
   const { isAdmin, isPrintManager } = useRoles();
-  const canReview = isAdmin || isPrintManager;
   const qc = useQueryClient();
 
   const list = useQuery({
@@ -29,32 +37,39 @@ function PrintPage() {
       const ids = Array.from(new Set(data.map((r) => r.employee_id)));
       const profiles = ids.length ? (await supabase.from("profiles").select("id, full_name").in("id", ids)).data ?? [] : [];
       const nameMap = new Map(profiles.map((p) => [p.id, p.full_name]));
-      return data.map((r) => ({ ...r, employee_name: nameMap.get(r.employee_id) ?? null }));
+      // Print manager doesn't see confidential docs still awaiting principal approval
+      let rows = data.map((r) => ({ ...r, employee_name: nameMap.get(r.employee_id) ?? null }));
+      if (!isAdmin && isPrintManager) {
+        rows = rows.filter((r) => r.status !== "pending_principal");
+      }
+      return rows;
     },
   });
 
   useEffect(() => {
+    const canReview = isAdmin || isPrintManager;
     if (!canReview || !list.data) return;
     if (!list.data.some((r) => r.unseen_admin)) return;
     supabase.from("print_requests").update({ unseen_admin: false }).eq("unseen_admin", true)
       .then(() => qc.invalidateQueries({ queryKey: ["badge-counts"] }));
-  }, [canReview, list.data, qc]);
+  }, [isAdmin, isPrintManager, list.data, qc]);
 
   const review = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "approved" | "printed" | "rejected" }) => {
-      const { error } = await supabase.from("print_requests").update({ status }).eq("id", id);
+    mutationFn: async ({ id, status, principalOk }: { id: string; status: string; principalOk?: boolean }) => {
+      const patch: Record<string, unknown> = { status };
+      if (principalOk) {
+        patch.principal_approved_at = new Date().toISOString();
+        patch.principal_approved_by = user?.id;
+      }
+      const { error } = await supabase.from("print_requests").update(patch).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["prints"] }); toast.success("تم"); },
   });
 
   async function openAttachment(path: string) {
-    try {
-      const url = await getAttachmentUrl(path);
-      window.open(url, "_blank");
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
+    try { window.open(await getAttachmentUrl(path), "_blank"); }
+    catch (e) { toast.error((e as Error).message); }
   }
 
   return (
@@ -66,9 +81,10 @@ function PrintPage() {
 
       <div className="space-y-2">
         {list.data?.map((r) => (
-          <div key={r.id} className="glass rounded-xl p-4 flex flex-wrap items-center gap-3">
+          <div key={r.id} className={`glass rounded-xl p-4 flex flex-wrap items-center gap-3 ${r.is_confidential ? "border-r-4 border-accent" : ""}`}>
             <div className="flex-1 min-w-[200px]">
               <div className="font-semibold flex items-center gap-2">
+                {r.is_confidential && <Lock className="h-4 w-4 text-accent" title="مستند سري" />}
                 {r.title}
                 {r.attachment_path && (
                   <button onClick={() => openAttachment(r.attachment_path!)} className="text-primary hover:underline text-xs inline-flex items-center gap-1">
@@ -76,17 +92,42 @@ function PrintPage() {
                   </button>
                 )}
               </div>
-              <div className="text-xs text-muted-foreground">{r.employee_name ?? "—"} · {r.copies} نسخة</div>
+              <div className="text-xs text-muted-foreground">{r.employee_name ?? "—"} · {r.copies} نسخة{r.is_confidential ? " · سري" : ""}</div>
+              {r.principal_approved_at && (
+                <div className="text-xs text-success mt-1 flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3" /> اعتمده المدير
+                </div>
+              )}
             </div>
-            <span className={`text-xs px-2 py-1 rounded-full ${r.status === "printed" ? "bg-success/20 text-success" : r.status === "approved" ? "bg-primary/20 text-primary" : r.status === "rejected" ? "bg-destructive/20 text-destructive" : "bg-warning/20 text-warning"}`}>
-              {{ pending: "بانتظار", approved: "معتمد", printed: "تمت الطباعة", rejected: "مرفوض" }[r.status]}
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              r.status === "printed" ? "bg-success/20 text-success"
+              : r.status === "approved" ? "bg-primary/20 text-primary"
+              : r.status === "rejected" ? "bg-destructive/20 text-destructive"
+              : r.status === "pending_principal" ? "bg-accent/20 text-accent"
+              : "bg-warning/20 text-warning"
+            }`}>
+              {STATUS_LABEL[r.status] ?? r.status}
             </span>
-            {canReview && r.status !== "printed" && r.status !== "rejected" && (
+
+            {/* Principal/admin approves confidential prints */}
+            {isAdmin && r.status === "pending_principal" && (
               <div className="flex gap-1">
-                {r.status === "pending" && <Button size="sm" onClick={() => review.mutate({ id: r.id, status: "approved" })} className="bg-primary text-primary-foreground"><Check className="h-4 w-4" /></Button>}
-                {r.status === "approved" && <Button size="sm" onClick={() => review.mutate({ id: r.id, status: "printed" })} className="bg-success text-success-foreground">تم</Button>}
+                <Button size="sm" onClick={() => review.mutate({ id: r.id, status: "pending", principalOk: true })} className="gap-1 bg-success text-success-foreground">
+                  <ShieldCheck className="h-4 w-4" /> أعتمد ويُرسل للطباعة
+                </Button>
                 <Button size="sm" onClick={() => review.mutate({ id: r.id, status: "rejected" })} className="bg-destructive text-destructive-foreground"><X className="h-4 w-4" /></Button>
               </div>
+            )}
+
+            {/* Print manager workflow */}
+            {(isAdmin || isPrintManager) && r.status === "pending" && (
+              <div className="flex gap-1">
+                <Button size="sm" onClick={() => review.mutate({ id: r.id, status: "approved" })} className="bg-primary text-primary-foreground"><Check className="h-4 w-4" /></Button>
+                <Button size="sm" onClick={() => review.mutate({ id: r.id, status: "rejected" })} className="bg-destructive text-destructive-foreground"><X className="h-4 w-4" /></Button>
+              </div>
+            )}
+            {(isAdmin || isPrintManager) && r.status === "approved" && (
+              <Button size="sm" onClick={() => review.mutate({ id: r.id, status: "printed" })} className="bg-success text-success-foreground">تمت الطباعة</Button>
             )}
           </div>
         ))}
@@ -101,17 +142,29 @@ function NewPrintDialog({ onSaved }: { onSaved: () => void }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [copies, setCopies] = useState(1);
+  const [confidential, setConfidential] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+
   const save = useMutation({
     mutationFn: async () => {
       let attachment_path: string | null = null;
       if (file) attachment_path = await uploadAttachment(file, "print");
-      const { error } = await supabase.from("print_requests").insert({ employee_id: user!.id, title, copies, attachment_path });
+      const { error } = await supabase.from("print_requests").insert({
+        employee_id: user!.id, title, copies,
+        attachment_path,
+        is_confidential: confidential,
+        status: confidential ? "pending_principal" : "pending",
+      });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("تم الإرسال"); setOpen(false); setTitle(""); setCopies(1); setFile(null); onSaved(); },
+    onSuccess: () => {
+      toast.success(confidential ? "أُرسل إلى المدير للاعتماد" : "تم الإرسال للطباعة");
+      setOpen(false); setTitle(""); setCopies(1); setFile(null); setConfidential(false);
+      onSaved();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button className="gap-2 gradient-primary text-primary-foreground"><Plus className="h-4 w-4" /> طلب طباعة</Button></DialogTrigger>
@@ -125,6 +178,13 @@ function NewPrintDialog({ onSaved }: { onSaved: () => void }) {
             <Input type="file" accept=".pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             {file && <p className="text-xs text-muted-foreground mt-1 truncate">{file.name}</p>}
           </div>
+          <label className={`flex items-start gap-2 text-sm cursor-pointer p-3 rounded-lg border ${confidential ? "border-accent bg-accent/10" : "border-border/40"}`}>
+            <input type="checkbox" checked={confidential} onChange={(e) => setConfidential(e.target.checked)} className="h-4 w-4 mt-0.5 accent-accent" />
+            <span>
+              <span className="font-semibold flex items-center gap-1"><Lock className="h-3.5 w-3.5" /> مستند سري (اختبارات، وثائق حساسة)</span>
+              <span className="text-xs text-muted-foreground block mt-0.5">سيتم إرساله للمدير للاعتماد أولاً قبل وصوله لمسؤول الطباعة.</span>
+            </span>
+          </label>
           <Button onClick={() => save.mutate()} disabled={!title || save.isPending} className="w-full gradient-primary text-primary-foreground">
             {save.isPending ? "جاري الرفع..." : "إرسال"}
           </Button>

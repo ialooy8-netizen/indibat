@@ -1,33 +1,97 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { useRoles } from "@/hooks/useRoles";
+import { useRoles, type AppRole, ROLE_LABELS, setDemoRole } from "@/hooks/useRoles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Settings as SettingsIcon, Trash2, UserPlus } from "lucide-react";
+import { Settings as SettingsIcon, Trash2, UserPlus, Eye, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { seedDemoData, wipeDemoData } from "@/lib/demo.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
 });
 
 function SettingsPage() {
-  const { isMaster, loading } = useRoles();
+  const { isReallyMaster, loading } = useRoles();
 
   if (loading) return <div className="text-muted-foreground p-6">جاري التحميل...</div>;
-  if (!isMaster) return <Navigate to="/" />;
+  if (!isReallyMaster) return <Navigate to="/" />;
 
   return (
     <div className="space-y-8 max-w-3xl">
       <h2 className="text-3xl font-bold flex items-center gap-2">
         <SettingsIcon className="h-7 w-7 text-primary" /> الإعدادات
       </h2>
+      <DemoModeSection />
       <FacilityConfigSection />
       <ClassTeachersSection />
     </div>
+  );
+}
+
+function DemoModeSection() {
+  const { demoRole } = useRoles();
+  const seed = useServerFn(seedDemoData);
+  const wipe = useServerFn(wipeDemoData);
+  const [busy, setBusy] = useState(false);
+
+  const PREVIEW_ROLES: AppRole[] = ["principal", "vice_principal", "teacher", "print_manager"];
+
+  async function doSeed() {
+    setBusy(true);
+    try { const r = await seed(); toast.success(`تم إنشاء ${r.classes} صفوف و ${r.students} طلاب تجريبيين`); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  }
+  async function doWipe() {
+    if (!confirm("حذف كل البيانات التجريبية؟")) return;
+    setBusy(true);
+    try { await wipe(); toast.success("تم حذف البيانات التجريبية"); }
+    catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <section className="glass-strong rounded-2xl p-6 space-y-4 border border-accent/30">
+      <div>
+        <h3 className="text-xl font-bold flex items-center gap-2"><Sparkles className="h-5 w-5 text-accent" /> وضع المعاينة والتجربة</h3>
+        <p className="text-sm text-muted-foreground mt-1">جرّب النظام بعيون أدوار مختلفة، وأنشئ بيانات تجريبية بضغطة زر.</p>
+      </div>
+
+      <div>
+        <Label className="mb-2 block">معاينة النظام كـ:</Label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {PREVIEW_ROLES.map((r) => (
+            <Button key={r} variant={demoRole === r ? "default" : "outline"}
+              onClick={() => setDemoRole(demoRole === r ? null : r)}
+              className={demoRole === r ? "gradient-primary text-primary-foreground gap-1" : "gap-1"}>
+              <Eye className="h-3.5 w-3.5" /> {ROLE_LABELS[r]}
+            </Button>
+          ))}
+        </div>
+        {demoRole && (
+          <p className="text-xs text-accent mt-2">تعاين النظام الآن كـ <strong>{ROLE_LABELS[demoRole]}</strong>. صلاحيات الكتابة تبقى على دورك الحقيقي.</p>
+        )}
+      </div>
+
+      <div className="border-t border-border/30 pt-4">
+        <Label className="mb-2 block">بيانات تجريبية</Label>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={doSeed} disabled={busy} className="gradient-primary text-primary-foreground gap-2">
+            <RefreshCw className="h-4 w-4" /> إنشاء/تحديث بيانات تجريبية
+          </Button>
+          <Button onClick={doWipe} disabled={busy} variant="outline" className="text-destructive gap-2">
+            <Trash2 className="h-4 w-4" /> حذف البيانات التجريبية
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">ينشئ 2 صفوف و12 طالب تجريبي مع نقاط سلوك متنوعة. لن يؤثر على بيانات المدرسة الحقيقية.</p>
+      </div>
+    </section>
   );
 }
 
@@ -91,7 +155,6 @@ function ClassTeachersSection() {
     },
   });
 
-  // Only show users that have the "teacher" role
   const teachers = useQuery({
     queryKey: ["teachers-list"],
     queryFn: async () => {
@@ -110,15 +173,8 @@ function ClassTeachersSection() {
   const assignments = useQuery({
     queryKey: ["class-teachers"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("class_teachers")
-        .select("id, class_id, teacher_id, classes(name), profiles!class_teachers_teacher_id_fkey(full_name, email)");
-      if (error) {
-        // fallback: fetch separately if the join name differs
-        const { data: rows, error: e2 } = await supabase.from("class_teachers").select("*");
-        if (e2) throw e2;
-        return rows as unknown as Array<{ id: string; class_id: string; teacher_id: string }>;
-      }
+      const { data, error } = await supabase.from("class_teachers").select("*");
+      if (error) throw error;
       return data;
     },
   });
@@ -134,20 +190,15 @@ function ClassTeachersSection() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("class_teachers").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: async (id: string) => { const { error } = await supabase.from("class_teachers").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["class-teachers"] }),
   });
 
-  function nameForClass(id: string) {
-    return classes.data?.find((c) => c.id === id)?.name ?? "—";
-  }
-  function nameForTeacher(id: string) {
+  const nameForClass = (id: string) => classes.data?.find((c) => c.id === id)?.name ?? "—";
+  const nameForTeacher = (id: string) => {
     const t = teachers.data?.find((x) => x.id === id);
     return t?.full_name ?? t?.email ?? "—";
-  }
+  };
 
   return (
     <section className="glass rounded-2xl p-6 space-y-4">
@@ -161,17 +212,14 @@ function ClassTeachersSection() {
         <Select value={teacherId} onValueChange={setTeacherId}>
           <SelectTrigger className="w-56"><SelectValue placeholder="المعلم" /></SelectTrigger>
           <SelectContent>
-            {teachers.data?.length === 0 && <div className="p-2 text-xs text-muted-foreground">لا يوجد معلمون. عيّن دور "معلم" في حسابات المستخدمين أولاً.</div>}
+            {teachers.data?.length === 0 && <div className="p-2 text-xs text-muted-foreground">لا يوجد معلمون. عيّن دور "معلم" أولاً.</div>}
             {teachers.data?.map((t) => <SelectItem key={t.id} value={t.id}>{t.full_name ?? t.email}</SelectItem>)}
           </SelectContent>
         </Select>
         <Button onClick={() => add.mutate()} disabled={add.isPending} className="gradient-primary text-primary-foreground">إضافة</Button>
       </div>
-
       <div className="space-y-2 pt-2">
-        {assignments.data?.length === 0 && (
-          <p className="text-sm text-muted-foreground">لا يوجد تعيينات بعد.</p>
-        )}
+        {assignments.data?.length === 0 && <p className="text-sm text-muted-foreground">لا يوجد تعيينات بعد.</p>}
         {assignments.data?.map((a) => (
           <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
             <span className="flex-1 text-sm">

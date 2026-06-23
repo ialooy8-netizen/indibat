@@ -169,6 +169,7 @@ export type Database = {
           created_at: string
           grade: string | null
           id: string
+          is_demo: boolean
           name: string
           updated_at: string
         }
@@ -176,6 +177,7 @@ export type Database = {
           created_at?: string
           grade?: string | null
           id?: string
+          is_demo?: boolean
           name: string
           updated_at?: string
         }
@@ -183,6 +185,7 @@ export type Database = {
           created_at?: string
           grade?: string | null
           id?: string
+          is_demo?: boolean
           name?: string
           updated_at?: string
         }
@@ -214,10 +217,14 @@ export type Database = {
       }
       leave_requests: {
         Row: {
+          attachment_path: string | null
           created_at: string
           employee_id: string
           end_date: string
+          expected_return: string | null
           id: string
+          leave_from: string | null
+          leave_type: string
           reason: string
           review_note: string | null
           reviewer_id: string | null
@@ -225,12 +232,17 @@ export type Database = {
           status: string
           unseen_admin: boolean
           updated_at: string
+          will_return: boolean | null
         }
         Insert: {
+          attachment_path?: string | null
           created_at?: string
           employee_id: string
           end_date: string
+          expected_return?: string | null
           id?: string
+          leave_from?: string | null
+          leave_type?: string
           reason: string
           review_note?: string | null
           reviewer_id?: string | null
@@ -238,18 +250,63 @@ export type Database = {
           status?: string
           unseen_admin?: boolean
           updated_at?: string
+          will_return?: boolean | null
         }
         Update: {
+          attachment_path?: string | null
           created_at?: string
           employee_id?: string
           end_date?: string
+          expected_return?: string | null
           id?: string
+          leave_from?: string | null
+          leave_type?: string
           reason?: string
           review_note?: string | null
           reviewer_id?: string | null
           start_date?: string
           status?: string
           unseen_admin?: boolean
+          updated_at?: string
+          will_return?: boolean | null
+        }
+        Relationships: []
+      }
+      lesson_plans: {
+        Row: {
+          content: string
+          created_at: string
+          duration_minutes: number | null
+          grade: string | null
+          id: string
+          objectives: string | null
+          subject: string
+          teacher_id: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          duration_minutes?: number | null
+          grade?: string | null
+          id?: string
+          objectives?: string | null
+          subject: string
+          teacher_id: string
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          duration_minutes?: number | null
+          grade?: string | null
+          id?: string
+          objectives?: string | null
+          subject?: string
+          teacher_id?: string
+          topic?: string
           updated_at?: string
         }
         Relationships: []
@@ -297,7 +354,10 @@ export type Database = {
           employee_id: string
           file_url: string | null
           id: string
+          is_confidential: boolean
           notes: string | null
+          principal_approved_at: string | null
+          principal_approved_by: string | null
           status: string
           title: string
           unseen_admin: boolean
@@ -310,7 +370,10 @@ export type Database = {
           employee_id: string
           file_url?: string | null
           id?: string
+          is_confidential?: boolean
           notes?: string | null
+          principal_approved_at?: string | null
+          principal_approved_by?: string | null
           status?: string
           title: string
           unseen_admin?: boolean
@@ -323,7 +386,10 @@ export type Database = {
           employee_id?: string
           file_url?: string | null
           id?: string
+          is_confidential?: boolean
           notes?: string | null
+          principal_approved_at?: string | null
+          principal_approved_by?: string | null
           status?: string
           title?: string
           unseen_admin?: boolean
@@ -407,6 +473,7 @@ export type Database = {
           created_at: string
           gender: string | null
           id: string
+          is_demo: boolean
           name: string
           national_id: string | null
           notes: string | null
@@ -420,6 +487,7 @@ export type Database = {
           created_at?: string
           gender?: string | null
           id?: string
+          is_demo?: boolean
           name: string
           national_id?: string | null
           notes?: string | null
@@ -433,6 +501,7 @@ export type Database = {
           created_at?: string
           gender?: string | null
           id?: string
+          is_demo?: boolean
           name?: string
           national_id?: string | null
           notes?: string | null
@@ -516,10 +585,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "master" | "principal" | "teacher" | "print_manager"
+      app_role:
+        | "master"
+        | "principal"
+        | "teacher"
+        | "print_manager"
+        | "vice_principal"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -647,7 +722,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["master", "principal", "teacher", "print_manager"],
+      app_role: [
+        "master",
+        "principal",
+        "teacher",
+        "print_manager",
+        "vice_principal",
+      ],
     },
   },
 } as const

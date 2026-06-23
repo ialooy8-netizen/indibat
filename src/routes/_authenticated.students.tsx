@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Search, Upload, GraduationCap, ClipboardPaste, Trash2 } from "lucide-react";
+import { Plus, Search, Upload, GraduationCap, ClipboardPaste, Trash2, Users as UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/students")({
 
 function StudentsPage() {
   const qc = useQueryClient();
-  const { isAdmin } = useRoles();
+  const { isAdmin, isMaster } = useRoles();
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState<string>("all");
 
@@ -49,6 +49,23 @@ function StudentsPage() {
     qc.invalidateQueries({ queryKey: ["classes"] });
   };
 
+  const delStudent = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("students").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("تم حذف الطالب"); refresh(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const classCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    students.data?.forEach((s) => {
+      if (s.class_id) m.set(s.class_id, (m.get(s.class_id) ?? 0) + 1);
+    });
+    return m;
+  }, [students.data]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -74,28 +91,44 @@ function StudentsPage() {
           <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">جميع الصفوف</SelectItem>
-            {classes.data?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            {classes.data?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}{classCounts.get(c.id) ? ` (${classCounts.get(c.id)})` : ""}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
-      {isAdmin && classes.data && classes.data.length > 0 && (
-        <ClassChips classes={classes.data} onDeleted={refresh} />
+      {classFilter === "all" && classes.data && classes.data.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          {classes.data.map((c) => (
+            <button key={c.id} onClick={() => setClassFilter(c.id)} className="glass rounded-xl p-3 text-right hover:bg-white/5 transition flex items-center justify-between">
+              <div>
+                <div className="font-semibold flex items-center gap-1">{c.name} {c.is_demo && <span className="text-[10px] px-1.5 rounded bg-accent/20 text-accent">تجريبي</span>}</div>
+                <div className="text-xs text-muted-foreground">{classCounts.get(c.id) ?? 0} طالب</div>
+              </div>
+              <UsersIcon className="h-5 w-5 text-primary/60" />
+            </button>
+          ))}
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {students.data?.map((s) => (
-          <Link key={s.id} to="/students/$id" params={{ id: s.id }} className="glass rounded-xl p-4 hover:bg-white/5 transition">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="font-semibold truncate">{s.name}</div>
-                <div className="text-xs text-muted-foreground">{(s.classes as { name: string } | null)?.name ?? "بدون صف"}</div>
-              </div>
+          <div key={s.id} className="glass rounded-xl p-4 flex items-start justify-between gap-2 hover:bg-white/5 transition">
+            <Link to="/students/$id" params={{ id: s.id }} className="flex-1 min-w-0">
+              <div className="font-semibold truncate">{s.name}</div>
+              <div className="text-xs text-muted-foreground">{(s.classes as { name: string } | null)?.name ?? "بدون صف"}</div>
+              {s.parent_phone && <div className="text-xs text-muted-foreground mt-1" dir="ltr">{s.parent_phone}</div>}
+            </Link>
+            <div className="flex flex-col items-end gap-1">
               <div className={`text-xs font-bold px-2 py-1 rounded-full ${s.behavior_points >= 80 ? "bg-success/20 text-success" : s.behavior_points >= 60 ? "bg-warning/20 text-warning" : "bg-destructive/20 text-destructive"}`}>
                 {s.behavior_points}
               </div>
+              {isMaster && (
+                <button onClick={() => { if (confirm(`حذف الطالب ${s.name}؟`)) delStudent.mutate(s.id); }} className="text-destructive/70 hover:text-destructive">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
-          </Link>
+          </div>
         ))}
         {students.data?.length === 0 && (
           <div className="col-span-full glass rounded-2xl p-10 text-center text-muted-foreground">
@@ -104,30 +137,34 @@ function StudentsPage() {
           </div>
         )}
       </div>
+
+      {isAdmin && classes.data && classes.data.length > 0 && (
+        <ClassChips classes={classes.data} onDeleted={refresh} />
+      )}
     </div>
   );
 }
 
 function ClassChips({ classes, onDeleted }: { classes: Array<{ id: string; name: string }>; onDeleted: () => void }) {
   const del = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("classes").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: async (id: string) => { const { error } = await supabase.from("classes").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("تم حذف الصف"); onDeleted(); },
     onError: (e: Error) => toast.error(e.message),
   });
   return (
-    <div className="flex flex-wrap gap-2">
-      {classes.map((c) => (
-        <span key={c.id} className="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-border/40 flex items-center gap-2">
-          {c.name}
-          <button onClick={() => { if (confirm(`حذف الصف "${c.name}" وكل طلابه؟`)) del.mutate(c.id); }} className="hover:text-destructive">
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </span>
-      ))}
-    </div>
+    <details className="glass rounded-xl p-3 text-sm">
+      <summary className="cursor-pointer text-muted-foreground">حذف صف</summary>
+      <div className="flex flex-wrap gap-2 mt-3">
+        {classes.map((c) => (
+          <span key={c.id} className="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-border/40 flex items-center gap-2">
+            {c.name}
+            <button onClick={() => { if (confirm(`حذف الصف "${c.name}" وكل طلابه؟`)) del.mutate(c.id); }} className="hover:text-destructive">
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -136,10 +173,7 @@ function ClassDialog({ onSaved }: { onSaved: () => void }) {
   const [name, setName] = useState("");
   const [grade, setGrade] = useState("");
   const save = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("classes").insert({ name, grade: grade || null });
-      if (error) throw error;
-    },
+    mutationFn: async () => { const { error } = await supabase.from("classes").insert({ name, grade: grade || null }); if (error) throw error; },
     onSuccess: () => { toast.success("تم إضافة الصف"); setOpen(false); setName(""); setGrade(""); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -194,51 +228,51 @@ function StudentDialog({ classes, onSaved }: { classes: Array<{ id: string; name
   );
 }
 
-type ParsedRow = { name: string; parent_name?: string; parent_phone?: string };
-
-function parsePastedText(text: string): ParsedRow[] {
-  return text.split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const parts = line.split(/[\t,،|;]+/).map((p) => p.trim()).filter(Boolean);
-      return { name: parts[0] ?? "", parent_name: parts[1] || undefined, parent_phone: parts[2] || undefined };
-    })
-    .filter((r) => r.name);
+function splitLines(s: string) {
+  return s.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
 }
 
 function BulkPasteDialog({ classes, onSaved }: { classes: Array<{ id: string; name: string }>; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
   const [classId, setClassId] = useState("");
-  const [text, setText] = useState("");
+  const [namesText, setNamesText] = useState("");
+  const [phonesText, setPhonesText] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const rows = useMemo(() => parsePastedText(text), [text]);
+  const names = useMemo(() => splitLines(namesText), [namesText]);
+  const phones = useMemo(() => splitLines(phonesText), [phonesText]);
+  const rows = useMemo(() => names.map((name, i) => ({
+    name, parent_phone: phones[i] || null,
+  })), [names, phones]);
+  const mismatched = phones.length > 0 && names.length !== phones.length;
 
   async function handleFile(file: File) {
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf);
     const sheet = wb.Sheets[wb.SheetNames[0]];
     const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
-    const lines = json.map((r) => {
+    const ns: string[] = [];
+    const ps: string[] = [];
+    for (const r of json) {
       const name = String(r["الاسم"] ?? r["name"] ?? r["Name"] ?? Object.values(r)[0] ?? "").trim();
-      const pn = String(r["ولي الأمر"] ?? r["parent_name"] ?? "").trim();
-      const ph = String(r["الجوال"] ?? r["phone"] ?? r["parent_phone"] ?? "").trim();
-      return [name, pn, ph].filter(Boolean).join(" | ");
-    }).filter(Boolean);
-    setText(lines.join("\n"));
+      const ph = String(r["الجوال"] ?? r["phone"] ?? r["parent_phone"] ?? Object.values(r)[1] ?? "").trim();
+      if (name) { ns.push(name); ps.push(ph); }
+    }
+    setNamesText(ns.join("\n"));
+    setPhonesText(ps.join("\n"));
   }
 
   async function save() {
     if (!classId) return toast.error("اختر الصف أولاً");
-    if (rows.length === 0) return toast.error("الصق قائمة الطلاب أولاً");
+    if (rows.length === 0) return toast.error("ألصق قائمة الأسماء أولاً");
+    if (mismatched && !confirm(`عدد الأسماء (${names.length}) لا يطابق عدد الأرقام (${phones.length}). متابعة بالأسماء فقط؟`)) return;
     setBusy(true);
     const payload = rows.map((r) => ({ ...r, class_id: classId }));
     const { error } = await supabase.from("students").insert(payload);
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success(`تم إضافة ${rows.length} طالب`);
-    setText(""); setClassId(""); setOpen(false); onSaved();
+    setNamesText(""); setPhonesText(""); setClassId(""); setOpen(false); onSaved();
   }
 
   return (
@@ -248,11 +282,11 @@ function BulkPasteDialog({ classes, onSaved }: { classes: Array<{ id: string; na
           <ClipboardPaste className="h-4 w-4" /> لصق قائمة
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><ClipboardPaste className="h-5 w-5 text-primary" /> لصق قائمة طلاب</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><ClipboardPaste className="h-5 w-5 text-primary" /> إضافة دفعة طلاب</DialogTitle>
           <DialogDescription>
-            اختر الصف ثم الصق الأسماء — اسم في كل سطر. يمكن إضافة ولي الأمر والجوال بفاصلة أو Tab.
+            اختر الصف، ثم ألصق الأسماء في خانة، وأرقام أولياء الأمور في خانة أخرى — كل طالب في سطر مستقل. ستتم المطابقة سطر-بسطر.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -266,40 +300,49 @@ function BulkPasteDialog({ classes, onSaved }: { classes: Array<{ id: string; na
               </SelectContent>
             </Select>
           </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label>قائمة الطلاب</Label>
-              <label className="text-xs text-primary cursor-pointer hover:underline flex items-center gap-1">
-                <Upload className="h-3 w-3" /> أو ارفع Excel
-                <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
-              </label>
-            </div>
-            <Textarea
-              rows={10}
-              dir="auto"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={"أحمد محمد\nعبدالله سالم | والده | 966500000000\nخالد ناصر"}
-              className="font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              {rows.length > 0 ? `✓ ${rows.length} طالب جاهز للحفظ` : "لم تتم إضافة أي طالب بعد"}
-            </p>
+          <div className="flex justify-end">
+            <label className="text-xs text-primary cursor-pointer hover:underline flex items-center gap-1">
+              <Upload className="h-3 w-3" /> أو ارفع Excel (عمودين: الاسم، الجوال)
+              <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+            </label>
           </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label>أسماء الطلاب ({names.length})</Label>
+              <Textarea
+                rows={10} dir="auto"
+                value={namesText} onChange={(e) => setNamesText(e.target.value)}
+                placeholder={"أحمد بن محمد\nعبدالله سالم\nخالد ناصر"}
+                className="font-medium"
+              />
+            </div>
+            <div>
+              <Label>أرقام أولياء الأمور ({phones.length}) — اختياري</Label>
+              <Textarea
+                rows={10} dir="ltr"
+                value={phonesText} onChange={(e) => setPhonesText(e.target.value)}
+                placeholder={"966500000001\n966500000002\n966500000003"}
+                className="font-mono text-sm"
+              />
+            </div>
+          </div>
+          {mismatched && (
+            <p className="text-xs text-warning">
+              ⚠ عدد الأسماء ({names.length}) لا يطابق عدد الأرقام ({phones.length}). تأكد من ترتيب الأسطر.
+            </p>
+          )}
           {rows.length > 0 && (
             <div className="glass rounded-xl p-3 max-h-48 overflow-y-auto text-sm space-y-1">
+              <div className="text-xs font-semibold text-muted-foreground mb-2">معاينة:</div>
               {rows.slice(0, 30).map((r, i) => (
                 <div key={i} className="flex justify-between gap-2">
                   <span className="truncate">{i + 1}. {r.name}</span>
-                  <span className="text-muted-foreground text-xs shrink-0" dir="ltr">{r.parent_phone ?? ""}</span>
+                  <span className="text-muted-foreground text-xs shrink-0" dir="ltr">{r.parent_phone ?? "—"}</span>
                 </div>
               ))}
               {rows.length > 30 && <p className="text-xs text-muted-foreground text-center pt-1">+{rows.length - 30} أكثر…</p>}
             </div>
           )}
-
           <Button onClick={save} disabled={!classId || rows.length === 0 || busy} className="w-full gradient-primary text-primary-foreground">
             {busy ? "جاري الحفظ..." : `حفظ ${rows.length || ""} طالب`}
           </Button>
