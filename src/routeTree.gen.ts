@@ -19,6 +19,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated.reports'
 import { Route as AuthenticatedPrintRouteImport } from './routes/_authenticated.print'
 import { Route as AuthenticatedPredictorRouteImport } from './routes/_authenticated.predictor'
+import { Route as AuthenticatedLessonPlannerRouteImport } from './routes/_authenticated.lesson-planner'
 import { Route as AuthenticatedLeavesRouteImport } from './routes/_authenticated.leaves'
 import { Route as AuthenticatedFacilitiesRouteImport } from './routes/_authenticated.facilities'
 import { Route as AuthenticatedCircularsRouteImport } from './routes/_authenticated.circulars'
@@ -74,6 +75,12 @@ const AuthenticatedPredictorRoute = AuthenticatedPredictorRouteImport.update({
   path: '/predictor',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedLessonPlannerRoute =
+  AuthenticatedLessonPlannerRouteImport.update({
+    id: '/lesson-planner',
+    path: '/lesson-planner',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedLeavesRoute = AuthenticatedLeavesRouteImport.update({
   id: '/leaves',
   path: '/leaves',
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/circulars': typeof AuthenticatedCircularsRoute
   '/facilities': typeof AuthenticatedFacilitiesRoute
   '/leaves': typeof AuthenticatedLeavesRoute
+  '/lesson-planner': typeof AuthenticatedLessonPlannerRoute
   '/predictor': typeof AuthenticatedPredictorRoute
   '/print': typeof AuthenticatedPrintRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -122,6 +130,7 @@ export interface FileRoutesByTo {
   '/circulars': typeof AuthenticatedCircularsRoute
   '/facilities': typeof AuthenticatedFacilitiesRoute
   '/leaves': typeof AuthenticatedLeavesRoute
+  '/lesson-planner': typeof AuthenticatedLessonPlannerRoute
   '/predictor': typeof AuthenticatedPredictorRoute
   '/print': typeof AuthenticatedPrintRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -140,6 +149,7 @@ export interface FileRoutesById {
   '/_authenticated/circulars': typeof AuthenticatedCircularsRoute
   '/_authenticated/facilities': typeof AuthenticatedFacilitiesRoute
   '/_authenticated/leaves': typeof AuthenticatedLeavesRoute
+  '/_authenticated/lesson-planner': typeof AuthenticatedLessonPlannerRoute
   '/_authenticated/predictor': typeof AuthenticatedPredictorRoute
   '/_authenticated/print': typeof AuthenticatedPrintRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/circulars'
     | '/facilities'
     | '/leaves'
+    | '/lesson-planner'
     | '/predictor'
     | '/print'
     | '/reports'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/circulars'
     | '/facilities'
     | '/leaves'
+    | '/lesson-planner'
     | '/predictor'
     | '/print'
     | '/reports'
@@ -191,6 +203,7 @@ export interface FileRouteTypes {
     | '/_authenticated/circulars'
     | '/_authenticated/facilities'
     | '/_authenticated/leaves'
+    | '/_authenticated/lesson-planner'
     | '/_authenticated/predictor'
     | '/_authenticated/print'
     | '/_authenticated/reports'
@@ -279,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPredictorRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/lesson-planner': {
+      id: '/_authenticated/lesson-planner'
+      path: '/lesson-planner'
+      fullPath: '/lesson-planner'
+      preLoaderRoute: typeof AuthenticatedLessonPlannerRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/leaves': {
       id: '/_authenticated/leaves'
       path: '/leaves'
@@ -335,6 +355,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedCircularsRoute: typeof AuthenticatedCircularsRoute
   AuthenticatedFacilitiesRoute: typeof AuthenticatedFacilitiesRoute
   AuthenticatedLeavesRoute: typeof AuthenticatedLeavesRoute
+  AuthenticatedLessonPlannerRoute: typeof AuthenticatedLessonPlannerRoute
   AuthenticatedPredictorRoute: typeof AuthenticatedPredictorRoute
   AuthenticatedPrintRoute: typeof AuthenticatedPrintRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
@@ -350,6 +371,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCircularsRoute: AuthenticatedCircularsRoute,
   AuthenticatedFacilitiesRoute: AuthenticatedFacilitiesRoute,
   AuthenticatedLeavesRoute: AuthenticatedLeavesRoute,
+  AuthenticatedLessonPlannerRoute: AuthenticatedLessonPlannerRoute,
   AuthenticatedPredictorRoute: AuthenticatedPredictorRoute,
   AuthenticatedPrintRoute: AuthenticatedPrintRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
@@ -371,13 +393,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
