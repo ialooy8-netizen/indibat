@@ -55,13 +55,11 @@ function PrintPage() {
   }, [isAdmin, isPrintManager, list.data, qc]);
 
   const review = useMutation({
-    mutationFn: async ({ id, status, principalOk }: { id: string; status: string; principalOk?: boolean }) => {
-      const patch: Record<string, unknown> = { status };
-      if (principalOk) {
-        patch.principal_approved_at = new Date().toISOString();
-        patch.principal_approved_by = user?.id;
-      }
-      const { error } = await supabase.from("print_requests").update(patch).eq("id", id);
+    mutationFn: async ({ id, status, principalOk }: { id: string; status: "pending" | "pending_principal" | "approved" | "printed" | "rejected"; principalOk?: boolean }) => {
+      const { error } = await supabase.from("print_requests").update({
+        status,
+        ...(principalOk ? { principal_approved_at: new Date().toISOString(), principal_approved_by: user?.id } : {}),
+      }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["prints"] }); toast.success("تم"); },
@@ -84,7 +82,7 @@ function PrintPage() {
           <div key={r.id} className={`glass rounded-xl p-4 flex flex-wrap items-center gap-3 ${r.is_confidential ? "border-r-4 border-accent" : ""}`}>
             <div className="flex-1 min-w-[200px]">
               <div className="font-semibold flex items-center gap-2">
-                {r.is_confidential && <Lock className="h-4 w-4 text-accent" title="مستند سري" />}
+                {r.is_confidential && <span title="مستند سري"><Lock className="h-4 w-4 text-accent" /></span>}
                 {r.title}
                 {r.attachment_path && (
                   <button onClick={() => openAttachment(r.attachment_path!)} className="text-primary hover:underline text-xs inline-flex items-center gap-1">

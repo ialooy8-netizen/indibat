@@ -182,8 +182,8 @@ function StudentProfile() {
         <TabsContent value="comms" className="space-y-2 mt-4">
           {comms.data?.map((c) => (
             <div key={c.id} className="glass rounded-xl p-3">
-              <div className="flex justify-between text-xs text-muted-foreground"><span>{c.channel}</span><span>{new Date(c.created_at).toLocaleString("ar")}</span></div>
-              {c.body && <p className="text-sm mt-1 whitespace-pre-wrap">{c.body}</p>}
+              <div className="flex justify-between text-xs text-muted-foreground"><span>{c.type}</span><span>{new Date(c.created_at).toLocaleString("ar")}</span></div>
+              {c.message && <p className="text-sm mt-1 whitespace-pre-wrap">{c.message}</p>}
             </div>
           ))}
           {comms.data?.length === 0 && <p className="text-muted-foreground text-sm text-center py-6">لا يوجد سجل مراسلات</p>}

@@ -136,20 +136,18 @@ function NewLeaveDialog({ onSaved }: { onSaved: () => void }) {
     mutationFn: async () => {
       let attachment_path: string | null = null;
       if (file) attachment_path = await uploadAttachment(file, "leaves");
-      const payload: Record<string, unknown> = {
+      const today2 = new Date().toISOString().slice(0, 10);
+      const { error } = await supabase.from("leave_requests").insert({
         employee_id: user!.id,
         leave_type: leaveType,
         reason,
-        start_date: start || new Date().toISOString().slice(0, 10),
-        end_date: leaveType === "full_day" ? (end || start) : (start || new Date().toISOString().slice(0, 10)),
+        start_date: start || today2,
+        end_date: leaveType === "full_day" ? (end || start || today2) : (start || today2),
         attachment_path,
-      };
-      if (leaveType === "partial_leave") {
-        payload.leave_from = leaveFrom || null;
-        payload.will_return = willReturn;
-        payload.expected_return = willReturn && expectedReturn ? expectedReturn : null;
-      }
-      const { error } = await supabase.from("leave_requests").insert(payload);
+        leave_from: leaveType === "partial_leave" ? (leaveFrom || null) : null,
+        will_return: leaveType === "partial_leave" ? willReturn : null,
+        expected_return: leaveType === "partial_leave" && willReturn ? (expectedReturn || null) : null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
