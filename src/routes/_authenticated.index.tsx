@@ -232,7 +232,7 @@ function Dashboard() {
                     <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
                     <RadialBar dataKey="pct" background cornerRadius={6} />
                     <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                      formatter={(v: number, _n, p: { payload: { name: string; value: number } }) => [`${p.payload.value} طالب (${v}%)`, p.payload.name]} />
+                      formatter={(v, _n, p) => { const pl = (p as { payload?: { name?: string; value?: number } }).payload; return [`${pl?.value ?? 0} طالب (${v}%)`, pl?.name ?? ""]; }} />
                   </RadialBarChart>
                 </ResponsiveContainer>
               </div>
