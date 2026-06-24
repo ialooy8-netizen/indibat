@@ -27,9 +27,76 @@ function SettingsPage() {
       <h2 className="text-3xl font-bold flex items-center gap-2">
         <SettingsIcon className="h-7 w-7 text-primary" /> الإعدادات
       </h2>
+      <BrandingSection />
       <DemoModeSection />
       <FacilityConfigSection />
       <ClassTeachersSection />
+    </div>
+  );
+}
+
+function BrandingSection() {
+  const qc = useQueryClient();
+  const current = useQuery({
+    queryKey: ["branding"],
+    queryFn: async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "branding").maybeSingle();
+      return (data?.value as { logoUrl: string | null; homeLogoUrl: string | null }) ?? { logoUrl: null, homeLogoUrl: null };
+    },
+  });
+  const [busy, setBusy] = useState<"sidebar" | "home" | null>(null);
+
+  async function upload(file: File, slot: "sidebar" | "home") {
+    setBusy(slot);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `branding/${slot}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("attachments").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: signed, error: signErr } = await supabase.storage.from("attachments").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+      if (signErr) throw signErr;
+      const url = signed.signedUrl;
+      const next = { ...(current.data ?? { logoUrl: null, homeLogoUrl: null }) };
+      if (slot === "sidebar") next.logoUrl = url; else next.homeLogoUrl = url;
+      const { error: updErr } = await supabase.from("app_settings").update({ value: next, updated_at: new Date().toISOString() }).eq("key", "branding");
+      if (updErr) throw updErr;
+      toast.success("تم تحديث الشعار");
+      qc.invalidateQueries({ queryKey: ["branding"] });
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(null); }
+  }
+
+  async function reset() {
+    if (!confirm("إعادة الشعارات إلى الإعداد الافتراضي؟")) return;
+    await supabase.from("app_settings").update({ value: { logoUrl: null, homeLogoUrl: null }, updated_at: new Date().toISOString() }).eq("key", "branding");
+    qc.invalidateQueries({ queryKey: ["branding"] });
+    toast.success("تمت الإعادة");
+  }
+
+  return (
+    <section className="glass-strong rounded-2xl p-6 space-y-4 border border-primary/30">
+      <div>
+        <h3 className="text-xl font-bold">شعار النظام</h3>
+        <p className="text-sm text-muted-foreground mt-1">يستخدم شعار الشريط الجانبي داخل النظام، وشعار الرئيسية في صفحتي الدخول واللوحة الرئيسية.</p>
+      </div>
+      <div className="grid md:grid-cols-2 gap-4">
+        <LogoSlot label="شعار الشريط الجانبي (مربع/صغير)" url={current.data?.logoUrl} busy={busy === "sidebar"} onPick={(f) => upload(f, "sidebar")} previewSize={64} />
+        <LogoSlot label="شعار الصفحة الرئيسية وصفحة الدخول (كبير)" url={current.data?.homeLogoUrl} busy={busy === "home"} onPick={(f) => upload(f, "home")} previewSize={128} />
+      </div>
+      <Button variant="outline" size="sm" onClick={reset}>إعادة إلى الافتراضي</Button>
+    </section>
+  );
+}
+
+function LogoSlot({ label, url, busy, onPick, previewSize }: { label: string; url: string | null | undefined; busy: boolean; onPick: (f: File) => void; previewSize: number }) {
+  return (
+    <div className="glass rounded-xl p-4 space-y-3">
+      <Label className="text-xs">{label}</Label>
+      <div className="flex items-center justify-center bg-white/5 rounded-lg" style={{ minHeight: previewSize + 16 }}>
+        {url ? <img src={url} alt="" style={{ height: previewSize, objectFit: "contain" }} /> : <span className="text-xs text-muted-foreground py-4">الافتراضي</span>}
+      </div>
+      <Input type="file" accept="image/*" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); }} />
+      {busy && <p className="text-xs text-primary">جاري الرفع...</p>}
     </div>
   );
 }
