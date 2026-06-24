@@ -11,6 +11,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useRealtimeBadges } from "@/hooks/useRealtimeBadges";
+import { useBranding } from "@/hooks/useBranding";
+import { LiveClock } from "@/components/app/LiveClock";
+import { AboutDialog } from "@/components/app/AboutDialog";
+import { StaffNoticesBanner } from "@/components/app/StaffNoticesBanner";
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }>; badge?: "leaves" | "prints" };
 
@@ -47,9 +51,12 @@ const NAV_BY_ROLE: Record<AppRole, NavItem[]> = {
     { to: "/leaves", label: "طلب إجازة", icon: FileText },
     { to: "/circulars", label: "التعاميم", icon: Megaphone },
   ],
+  // Printer is staff only — no student/attendance/timetables access
   print_manager: [
     { to: "/", label: "لوحة التحكم", icon: LayoutDashboard },
     { to: "/print", label: "قائمة الطباعة", icon: Printer, badge: "prints" },
+    { to: "/facilities", label: "حجز المرافق", icon: Building2 },
+    { to: "/leaves", label: "طلب إجازة", icon: FileText },
     { to: "/circulars", label: "التعاميم", icon: Megaphone },
   ],
 };
@@ -75,6 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const { logoUrl } = useBranding();
 
   const role: AppRole | null = roles[0] ?? null;
   const navItems = role ? NAV_BY_ROLE[role] : [];
@@ -94,12 +102,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="glass-strong rounded-2xl p-8 max-w-md text-center space-y-4">
+          <img src={logoUrl} alt="EduPulse" className="mx-auto h-20 object-contain" />
           <h2 className="text-2xl font-bold">حسابك بانتظار التفعيل</h2>
           <p className="text-muted-foreground">
             تم إنشاء حسابك بنجاح. يجب على الماستر تعيين دورك قبل أن تتمكن من استخدام النظام.
           </p>
           <p className="text-xs text-muted-foreground">{user?.email}</p>
-          <Button onClick={signOut} variant="outline" className="w-full">تسجيل الخروج</Button>
+          <div className="flex gap-2">
+            <AboutDialog variant="outline" className="flex-1" />
+            <Button onClick={signOut} variant="outline" className="flex-1">تسجيل الخروج</Button>
+          </div>
         </div>
       </div>
     );
@@ -107,9 +119,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const SidebarContent = (
     <div className="flex flex-col h-full">
-      <div className="p-6 border-b border-border/50">
-        <h1 className="text-3xl font-extrabold text-gradient">انضباط</h1>
-        <p className="text-xs text-muted-foreground mt-1">نظام إدارة المدرسة الذكي</p>
+      <div className="p-5 border-b border-border/50 text-center">
+        <img src={logoUrl} alt="EduPulse | نبض" className="mx-auto h-16 object-contain mb-2" />
+        <h1 className="text-xl font-extrabold text-gradient leading-tight">EduPulse | نبض</h1>
+        <p className="text-[10px] text-muted-foreground mt-1">الذكاء الذي يرصد نبض المدرسة</p>
+        <div className="mt-2 flex justify-center"><LiveClock /></div>
       </div>
       {isReallyMaster && demoRole && (
         <div className="mx-3 mt-3 rounded-xl bg-accent/20 border border-accent/40 p-3 text-xs">
@@ -148,9 +162,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="font-semibold truncate">{user?.email}</div>
           <div className="text-muted-foreground">{ROLE_LABELS[role]}</div>
         </div>
-        <Button onClick={signOut} variant="outline" size="sm" className="w-full gap-2">
-          <LogOut className="h-3.5 w-3.5" /> تسجيل الخروج
-        </Button>
+        <div className="flex gap-1">
+          <AboutDialog variant="outline" className="flex-1 text-xs" />
+          <Button onClick={signOut} variant="outline" size="sm" className="gap-1">
+            <LogOut className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -174,10 +191,16 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="flex-1 lg:mr-72 min-w-0">
         <header className="lg:hidden glass border-b border-border/50 p-3 flex items-center justify-between sticky top-0 z-30">
           <button onClick={() => setOpen(true)} className="p-2"><Menu className="h-5 w-5" /></button>
-          <h1 className="text-xl font-bold text-gradient">انضباط</h1>
-          <div className="w-9" />
+          <div className="flex items-center gap-2">
+            <img src={logoUrl} alt="" className="h-8 object-contain" />
+            <h1 className="text-base font-bold text-gradient">EduPulse | نبض</h1>
+          </div>
+          <LiveClock compact />
         </header>
-        <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
+        <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
+          <StaffNoticesBanner />
+          {children}
+        </div>
       </main>
     </div>
   );

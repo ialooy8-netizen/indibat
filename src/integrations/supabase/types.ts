@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       attendance: {
         Row: {
           created_at: string
@@ -463,6 +481,39 @@ export type Database = {
           status?: string
           unseen_admin?: boolean
           updated_at?: string
+        }
+        Relationships: []
+      }
+      staff_notices: {
+        Row: {
+          active: boolean
+          body: string | null
+          category: string
+          created_at: string
+          id: string
+          posted_by: string | null
+          severity: string
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          body?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          posted_by?: string | null
+          severity?: string
+          title: string
+        }
+        Update: {
+          active?: boolean
+          body?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          posted_by?: string | null
+          severity?: string
+          title?: string
         }
         Relationships: []
       }

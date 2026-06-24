@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Printer, Plus, Check, X, Paperclip, FileDown, Lock, ShieldCheck } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Printer, Plus, Check, X, Paperclip, FileDown, Lock, ShieldCheck, AlertTriangle, Megaphone } from "lucide-react";
 import { toast } from "sonner";
 import { uploadAttachment, getAttachmentUrl } from "@/lib/storage";
 
@@ -74,7 +75,10 @@ function PrintPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-3xl font-bold flex items-center gap-2"><Printer className="h-7 w-7 text-primary" /> طلبات الطباعة</h2>
-        <NewPrintDialog onSaved={() => qc.invalidateQueries({ queryKey: ["prints"] })} />
+        <div className="flex flex-wrap gap-2">
+          {(isPrintManager || isAdmin) && <NotifyStaffDialog />}
+          <NewPrintDialog onSaved={() => qc.invalidateQueries({ queryKey: ["prints"] })} />
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -185,6 +189,67 @@ function NewPrintDialog({ onSaved }: { onSaved: () => void }) {
           </label>
           <Button onClick={() => save.mutate()} disabled={!title || save.isPending} className="w-full gradient-primary text-primary-foreground">
             {save.isPending ? "جاري الرفع..." : "إرسال"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function NotifyStaffDialog() {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("تأخر في تنفيذ طلبات الطباعة");
+  const [body, setBody] = useState("نعتذر عن أي تأخير. هناك مشكلة تقنية في الطابعة. سيتم استئناف الخدمة في أقرب وقت ممكن.");
+  const [severity, setSeverity] = useState<"info" | "warning" | "critical">("warning");
+  const qc = useQueryClient();
+  const { user } = useAuth();
+
+  const post = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("staff_notices").insert({
+        posted_by: user?.id,
+        category: "printer",
+        title, body, severity, active: true,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("تم إخطار جميع الموظفين");
+      qc.invalidateQueries({ queryKey: ["staff-notices-active"] });
+      setOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="gap-2 border-warning/50 text-warning hover:bg-warning/10">
+          <AlertTriangle className="h-4 w-4" /> الإبلاغ عن عطل
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5 text-warning" /> إخطار الموظفين بمشكلة الطباعة</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">سيظهر هذا الإخطار كشريط بارز لجميع الموظفين في كل صفحة حتى يتم إخفاؤه.</p>
+          <div><Label>العنوان</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+          <div><Label>التفاصيل</Label><Textarea rows={3} value={body} onChange={(e) => setBody(e.target.value)} /></div>
+          <div>
+            <Label>درجة الأهمية</Label>
+            <div className="grid grid-cols-3 gap-2 mt-1">
+              {(["info", "warning", "critical"] as const).map((s) => (
+                <Button key={s} type="button" variant={severity === s ? "default" : "outline"}
+                  onClick={() => setSeverity(s)}
+                  className={severity === s ? (s === "critical" ? "bg-destructive text-destructive-foreground" : s === "warning" ? "bg-warning text-warning-foreground" : "bg-primary text-primary-foreground") : ""}>
+                  {s === "info" ? "معلومة" : s === "warning" ? "تحذير" : "عاجل"}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <Button onClick={() => post.mutate()} disabled={!title || post.isPending} className="w-full gradient-primary text-primary-foreground gap-2">
+            <Megaphone className="h-4 w-4" /> {post.isPending ? "جاري الإرسال..." : "نشر الإخطار للجميع"}
           </Button>
         </div>
       </DialogContent>
