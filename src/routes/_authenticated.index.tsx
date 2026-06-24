@@ -93,10 +93,10 @@ function Dashboard() {
       }
       const total = (data?.length ?? 0) || 1;
       return [
-        { name: "ممتاز (90+)", value: buckets.excellent, pct: Math.round((buckets.excellent / total) * 100), fill: "hsl(var(--success))" },
-        { name: "جيد (70-89)", value: buckets.good, pct: Math.round((buckets.good / total) * 100), fill: "hsl(var(--primary))" },
-        { name: "إنذار (50-69)", value: buckets.warning, pct: Math.round((buckets.warning / total) * 100), fill: "hsl(var(--warning))" },
-        { name: "خطر (<50)", value: buckets.risk, pct: Math.round((buckets.risk / total) * 100), fill: "hsl(var(--destructive))" },
+        { name: "ممتاز (90+)", value: buckets.excellent, pct: Math.round((buckets.excellent / total) * 100), fill: "var(--success)" },
+        { name: "جيد (70-89)", value: buckets.good, pct: Math.round((buckets.good / total) * 100), fill: "var(--primary)" },
+        { name: "إنذار (50-69)", value: buckets.warning, pct: Math.round((buckets.warning / total) * 100), fill: "var(--warning)" },
+        { name: "خطر (<50)", value: buckets.risk, pct: Math.round((buckets.risk / total) * 100), fill: "var(--destructive)" },
       ];
     },
   });
@@ -169,7 +169,7 @@ function Dashboard() {
     <div className="space-y-6">
       {/* Hero */}
       <div className="glass-strong rounded-2xl p-6 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ background: "radial-gradient(circle at 20% 0%, hsl(var(--primary)) 0%, transparent 50%), radial-gradient(circle at 80% 100%, hsl(var(--accent)) 0%, transparent 50%)" }} />
+        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ background: "radial-gradient(circle at 20% 0%, var(--primary) 0%, transparent 50%), radial-gradient(circle at 80% 100%, var(--accent) 0%, transparent 50%)" }} />
         <div className="relative flex flex-wrap items-center gap-6">
           <img src={homeLogoUrl} alt="EduPulse | نبض" className="h-24 md:h-28 object-contain shrink-0" />
           <div className="flex-1 min-w-[200px]">
@@ -203,21 +203,21 @@ function Dashboard() {
                   <AreaChart data={trend.data ?? []}>
                     <defs>
                       <linearGradient id="gPresent" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.6} />
-                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                        <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.6} />
+                        <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gAbsent" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={0.5} />
-                        <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
+                        <stop offset="0%" stopColor="var(--destructive)" stopOpacity={0.5} />
+                        <stop offset="100%" stopColor="var(--destructive)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
-                    <Area type="monotone" dataKey="present" name="حاضر" stroke="hsl(var(--primary))" fill="url(#gPresent)" strokeWidth={2} />
-                    <Area type="monotone" dataKey="absent" name="غائب" stroke="hsl(var(--destructive))" fill="url(#gAbsent)" strokeWidth={2} />
-                    <Area type="monotone" dataKey="late" name="متأخر" stroke="hsl(var(--warning))" fillOpacity={0} strokeWidth={2} strokeDasharray="4 4" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
+                    <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={11} />
+                    <YAxis stroke="var(--muted-foreground)" fontSize={11} />
+                    <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
+                    <Area type="monotone" dataKey="present" name="حاضر" stroke="var(--primary)" fill="url(#gPresent)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="absent" name="غائب" stroke="var(--destructive)" fill="url(#gAbsent)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="late" name="متأخر" stroke="var(--warning)" fillOpacity={0} strokeWidth={2} strokeDasharray="4 4" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -231,7 +231,7 @@ function Dashboard() {
                   <RadialBarChart innerRadius="25%" outerRadius="95%" data={behavior.data ?? []} startAngle={90} endAngle={-270}>
                     <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
                     <RadialBar dataKey="pct" background cornerRadius={6} />
-                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
                       formatter={(v, _n, p) => { const pl = (p as { payload?: { name?: string; value?: number } }).payload; return [`${pl?.value ?? 0} طالب (${v}%)`, pl?.name ?? ""]; }} />
                   </RadialBarChart>
                 </ResponsiveContainer>
@@ -254,13 +254,13 @@ function Dashboard() {
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={byClass.data ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
+                  <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={11} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={11} />
+                  <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="absent" name="غياب" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="late" name="تأخر" fill="hsl(var(--warning))" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="absent" name="غياب" fill="var(--destructive)" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="late" name="تأخر" fill="var(--warning)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
