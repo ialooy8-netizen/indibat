@@ -3,7 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRoles, welcomeFor } from "@/hooks/useRoles";
+import { useBranding } from "@/hooks/useBranding";
+import { AboutDialog } from "@/components/app/AboutDialog";
 import { Users, GraduationCap, AlertTriangle, TrendingUp, Megaphone, ClipboardCheck, FileText, Printer, Sparkles, Calendar as CalendarIcon } from "lucide-react";
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
+  RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, Legend,
+} from "recharts";
 
 export const Route = createFileRoute("/_authenticated/")({
   component: Dashboard,
@@ -12,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/")({
 function Dashboard() {
   const { user } = useAuth();
   const { isAdmin, isTeacher, isPrintManager, roles } = useRoles();
+  const { homeLogoUrl } = useBranding();
   const today = new Date().toISOString().slice(0, 10);
   const role = roles[0] ?? null;
 
@@ -40,6 +47,80 @@ function Dashboard() {
         absentToday: absentToday.count ?? 0,
         lowBehavior: lowBehavior.count ?? 0,
       };
+    },
+  });
+
+  // 14-day attendance trend (admin)
+  const trend = useQuery({
+    queryKey: ["dashboard-trend"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const from = new Date(); from.setDate(from.getDate() - 13);
+      const fromIso = from.toISOString().slice(0, 10);
+      const { data, error } = await supabase.from("attendance").select("date, status").gte("date", fromIso);
+      if (error) throw error;
+      const days = new Map<string, { date: string; present: number; absent: number; late: number }>();
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(from); d.setDate(from.getDate() + i);
+        const key = d.toISOString().slice(0, 10);
+        days.set(key, { date: key.slice(5), present: 0, absent: 0, late: 0 });
+      }
+      for (const r of data ?? []) {
+        const k = days.get(r.date);
+        if (!k) continue;
+        if (r.status === "absent") k.absent++;
+        else if (r.status === "late") k.late++;
+        else k.present++;
+      }
+      return Array.from(days.values());
+    },
+  });
+
+  // Behavior distribution (admin)
+  const behavior = useQuery({
+    queryKey: ["dashboard-behavior"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("students").select("behavior_points");
+      if (error) throw error;
+      const buckets = { excellent: 0, good: 0, warning: 0, risk: 0 };
+      for (const s of data ?? []) {
+        const p = s.behavior_points ?? 0;
+        if (p >= 90) buckets.excellent++;
+        else if (p >= 70) buckets.good++;
+        else if (p >= 50) buckets.warning++;
+        else buckets.risk++;
+      }
+      const total = (data?.length ?? 0) || 1;
+      return [
+        { name: "ممتاز (90+)", value: buckets.excellent, pct: Math.round((buckets.excellent / total) * 100), fill: "hsl(var(--success))" },
+        { name: "جيد (70-89)", value: buckets.good, pct: Math.round((buckets.good / total) * 100), fill: "hsl(var(--primary))" },
+        { name: "إنذار (50-69)", value: buckets.warning, pct: Math.round((buckets.warning / total) * 100), fill: "hsl(var(--warning))" },
+        { name: "خطر (<50)", value: buckets.risk, pct: Math.round((buckets.risk / total) * 100), fill: "hsl(var(--destructive))" },
+      ];
+    },
+  });
+
+  // Class comparison (admin) — absences last 30 days
+  const byClass = useQuery({
+    queryKey: ["dashboard-by-class"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const from = new Date(); from.setDate(from.getDate() - 30);
+      const { data, error } = await supabase
+        .from("attendance")
+        .select("status, students(classes(name))")
+        .gte("date", from.toISOString().slice(0, 10));
+      if (error) throw error;
+      const map = new Map<string, { name: string; absent: number; late: number }>();
+      for (const r of (data ?? []) as Array<{ status: string; students: { classes: { name: string } | null } | null }>) {
+        const cls = r.students?.classes?.name ?? "بدون صف";
+        const cur = map.get(cls) ?? { name: cls, absent: 0, late: 0 };
+        if (r.status === "absent") cur.absent++;
+        else if (r.status === "late") cur.late++;
+        map.set(cls, cur);
+      }
+      return Array.from(map.values()).sort((a, b) => b.absent - a.absent).slice(0, 6);
     },
   });
 
@@ -76,21 +157,115 @@ function Dashboard() {
     },
   });
 
+  const attendanceRate = (() => {
+    const t = trend.data;
+    if (!t?.length) return 0;
+    const tot = t.reduce((a, b) => a + b.present + b.absent + b.late, 0);
+    if (!tot) return 100;
+    return Math.round(((tot - t.reduce((a, b) => a + b.absent, 0)) / tot) * 100);
+  })();
+
   return (
     <div className="space-y-6">
-      <div className="glass-strong rounded-2xl p-6">
-        <h2 className="text-3xl font-bold">{welcomeFor(role, profile.data?.full_name)} 👋</h2>
-        <p className="text-muted-foreground mt-2 text-sm">{new Date().toLocaleDateString("ar", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+      {/* Hero */}
+      <div className="glass-strong rounded-2xl p-6 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ background: "radial-gradient(circle at 20% 0%, hsl(var(--primary)) 0%, transparent 50%), radial-gradient(circle at 80% 100%, hsl(var(--accent)) 0%, transparent 50%)" }} />
+        <div className="relative flex flex-wrap items-center gap-6">
+          <img src={homeLogoUrl} alt="EduPulse | نبض" className="h-24 md:h-28 object-contain shrink-0" />
+          <div className="flex-1 min-w-[200px]">
+            <h2 className="text-2xl md:text-3xl font-bold">{welcomeFor(role, profile.data?.full_name)} 👋</h2>
+            <p className="text-muted-foreground mt-1 text-sm">{new Date().toLocaleDateString("ar-BH", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+            <p className="text-xs text-accent mt-1 font-semibold">EduPulse | نبض — الذكاء الذي يرصد نبض المدرسة</p>
+          </div>
+          <AboutDialog variant="outline" />
+        </div>
       </div>
 
-      {/* Admin stats */}
+      {/* Admin stats + charts */}
       {isAdmin && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={GraduationCap} label="إجمالي الطلاب" value={stats.data?.students ?? 0} tone="primary" />
-          <StatCard icon={Users} label="عدد الصفوف" value={stats.data?.classes ?? 0} tone="accent" />
-          <StatCard icon={AlertTriangle} label="غياب اليوم" value={stats.data?.absentToday ?? 0} tone="warning" />
-          <StatCard icon={TrendingUp} label="سلوك منخفض" value={stats.data?.lowBehavior ?? 0} tone="destructive" />
-        </div>
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard icon={GraduationCap} label="إجمالي الطلاب" value={stats.data?.students ?? 0} tone="primary" />
+            <StatCard icon={Users} label="عدد الصفوف" value={stats.data?.classes ?? 0} tone="accent" />
+            <StatCard icon={AlertTriangle} label="غياب اليوم" value={stats.data?.absentToday ?? 0} tone="warning" />
+            <StatCard icon={TrendingUp} label="سلوك منخفض" value={stats.data?.lowBehavior ?? 0} tone="destructive" />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Attendance trend */}
+            <div className="lg:col-span-2 glass rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> اتجاه الحضور — آخر 14 يوم</h3>
+                <span className="text-xs text-muted-foreground">نسبة الحضور: <span className="text-primary font-bold tabular-nums">{attendanceRate}%</span></span>
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trend.data ?? []}>
+                    <defs>
+                      <linearGradient id="gPresent" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.6} />
+                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="gAbsent" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--destructive))" stopOpacity={0.5} />
+                        <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                    <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                    <Area type="monotone" dataKey="present" name="حاضر" stroke="hsl(var(--primary))" fill="url(#gPresent)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="absent" name="غائب" stroke="hsl(var(--destructive))" fill="url(#gAbsent)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="late" name="متأخر" stroke="hsl(var(--warning))" fillOpacity={0} strokeWidth={2} strokeDasharray="4 4" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Behavior radial */}
+            <div className="glass rounded-2xl p-5">
+              <h3 className="font-semibold mb-3 flex items-center gap-2"><Sparkles className="h-4 w-4 text-accent" /> توزيع نقاط السلوك</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadialBarChart innerRadius="25%" outerRadius="95%" data={behavior.data ?? []} startAngle={90} endAngle={-270}>
+                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                    <RadialBar dataKey="pct" background cornerRadius={6} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                      formatter={(v: number, _n, p: { payload: { name: string; value: number } }) => [`${p.payload.value} طالب (${v}%)`, p.payload.name]} />
+                  </RadialBarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid grid-cols-2 gap-1 mt-2">
+                {behavior.data?.map((b) => (
+                  <div key={b.name} className="flex items-center gap-1 text-[10px]">
+                    <span className="h-2 w-2 rounded-full" style={{ background: b.fill }} />
+                    <span className="text-muted-foreground">{b.name}</span>
+                    <span className="font-bold tabular-nums">{b.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* By-class comparison */}
+          <div className="glass rounded-2xl p-5">
+            <h3 className="font-semibold mb-3 flex items-center gap-2"><BarChartIcon /> مقارنة الصفوف — الغياب والتأخر (آخر 30 يوم)</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={byClass.data ?? []}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="absent" name="غياب" fill="hsl(var(--destructive))" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="late" name="تأخر" fill="hsl(var(--warning))" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Latest announcements */}
@@ -105,7 +280,7 @@ function Dashboard() {
             <div key={c.id} className="border-r-2 border-accent/40 pr-3">
               <div className="font-semibold">{c.title}</div>
               {c.body && <p className="text-sm text-muted-foreground line-clamp-2">{c.body}</p>}
-              <div className="text-xs text-muted-foreground mt-1">{new Date(c.created_at).toLocaleDateString("ar")}</div>
+              <div className="text-xs text-muted-foreground mt-1">{new Date(c.created_at).toLocaleDateString("ar-BH")}</div>
             </div>
           ))}
         </div>
@@ -123,7 +298,6 @@ function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* My pending */}
         {(isTeacher || isAdmin) && (
           <div className="glass rounded-2xl p-5">
             <h3 className="font-semibold mb-3">طلباتي المعلّقة</h3>
@@ -134,7 +308,6 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Upcoming bookings */}
         <div className="glass rounded-2xl p-5">
           <h3 className="font-semibold mb-3 flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-primary" /> الحجوزات القادمة</h3>
           {upcoming.data?.length === 0 && <p className="text-sm text-muted-foreground">لا توجد حجوزات قادمة.</p>}
@@ -150,6 +323,10 @@ function Dashboard() {
       </div>
     </div>
   );
+}
+
+function BarChartIcon() {
+  return <TrendingUp className="h-4 w-4 text-primary" />;
 }
 
 function Row({ label, value }: { label: string; value: number }) {
@@ -174,12 +351,13 @@ function QuickAction({ to, icon: Icon, label, tone }: { to: string; icon: React.
 function StatCard({ icon: Icon, label, value, tone }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; tone: "primary" | "accent" | "warning" | "destructive" }) {
   const toneClass = { primary: "text-primary", accent: "text-accent", warning: "text-warning", destructive: "text-destructive" }[tone];
   return (
-    <div className="glass rounded-2xl p-4">
+    <div className="glass rounded-2xl p-4 relative overflow-hidden group">
+      <div className="absolute -top-6 -left-6 w-20 h-20 rounded-full opacity-10 blur-xl group-hover:opacity-20 transition" style={{ background: `currentColor` }} />
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-muted-foreground">{label}</span>
         <Icon className={`h-5 w-5 ${toneClass}`} />
       </div>
-      <div className="text-3xl font-extrabold">{value}</div>
+      <div className="text-3xl font-extrabold tabular-nums">{value}</div>
     </div>
   );
 }
