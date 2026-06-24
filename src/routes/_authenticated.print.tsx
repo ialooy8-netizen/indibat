@@ -75,7 +75,10 @@ function PrintPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-3xl font-bold flex items-center gap-2"><Printer className="h-7 w-7 text-primary" /> طلبات الطباعة</h2>
-        <NewPrintDialog onSaved={() => qc.invalidateQueries({ queryKey: ["prints"] })} />
+        <div className="flex flex-wrap gap-2">
+          {(isPrintManager || isAdmin) && <NotifyStaffDialog />}
+          <NewPrintDialog onSaved={() => qc.invalidateQueries({ queryKey: ["prints"] })} />
+        </div>
       </div>
 
       <div className="space-y-2">
