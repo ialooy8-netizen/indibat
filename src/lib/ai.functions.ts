@@ -28,7 +28,7 @@ async function callAI(messages: Array<{ role: string; content: string }>) {
 export const generateParentMessage = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => ParentMsgInput.parse(data))
   .handler(async ({ data }) => {
-    const sys = `أنت مرشد سلوكي مدرسي. ولي الأمر عربي. اكتب رسالة واتساب قصيرة (٤-٦ جمل) لولي الأمر باللهجة الفصحى المهذبة. ابدأ بـ"السلام عليكم". لا تستعمل رموز كثيرة. ثم سطر بعنوان "الإجراء المقترح:" بتوصية عملية واحدة.`;
+    const sys = `أنت مرشد سلوكي مدرسي في مدرسة بحرينية تتبع وزارة التربية والتعليم. ولي الأمر بحريني. اكتب رسالة واتساب قصيرة (٤-٦ جمل) باللغة العربية الفصحى المهذبة المناسبة للسياق البحريني. ابدأ بـ"السلام عليكم ورحمة الله وبركاته" دون مبالغة في الرموز. ثم سطر بعنوان "الإجراء المقترح:" بتوصية عملية واحدة قابلة للتطبيق.`;
     const user = `الطالب: ${data.studentName}${data.className ? ` (${data.className})` : ""}
 نوع الواقعة: ${data.incidentType === "reward" ? "مكافأة/إيجابي" : "مخالفة"}
 ${data.severity ? `الخطورة: ${data.severity}\n` : ""}${typeof data.behaviorPoints === "number" ? `نقاط السلوك: ${data.behaviorPoints}\n` : ""}الملاحظة: ${data.note || "—"}`;
