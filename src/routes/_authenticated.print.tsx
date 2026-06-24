@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Printer, Plus, Check, X, Paperclip, FileDown, Lock, ShieldCheck } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Printer, Plus, Check, X, Paperclip, FileDown, Lock, ShieldCheck, AlertTriangle, Megaphone } from "lucide-react";
 import { toast } from "sonner";
 import { uploadAttachment, getAttachmentUrl } from "@/lib/storage";
 
