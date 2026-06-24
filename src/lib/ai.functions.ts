@@ -101,8 +101,8 @@ export const generateTeachingIdeas = createServerFn({ method: "POST" })
     const kindAr = data.kind === "activities" ? "أنشطة صفية تفاعلية"
       : data.kind === "exercises" ? "تمارين متدرجة (سهلة → متوسطة → متقدمة)"
       : "أفكار إبداعية للحصة";
-    const sys = `أنت خبير تعليمي. اقترح ${kindAr} عملية وقابلة للتطبيق فوراً في الفصل. اكتب 5-7 أفكار، كل فكرة بعنوان قصير ثم وصف مختصر (2-3 أسطر) وأدوات مطلوبة.`;
-    const user = `المادة: ${data.subject}${data.grade ? ` — الصف: ${data.grade}` : ""}\nالموضوع: ${data.topic}`;
+    const sys = `أنت خبير تربوي بحريني. اقترح ${kindAr} متوافقة مع منهج وزارة التربية والتعليم البحريني وقابلة للتطبيق فوراً في الفصل. اربطها بالبيئة البحرينية عند الإمكان. اكتب 5-7 أفكار، كل فكرة بعنوان قصير ثم وصف مختصر (2-3 أسطر) وأدوات مطلوبة.`;
+    const user = `المادة: ${data.subject}${data.grade ? ` — الصف: ${data.grade} (المنهج البحريني)` : ""}\nالموضوع: ${data.topic}`;
     const text = await callAI([{ role: "system", content: sys }, { role: "user", content: user }]);
     return { text };
   });
