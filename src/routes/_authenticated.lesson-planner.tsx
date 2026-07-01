@@ -125,7 +125,27 @@ function LessonPlannerPage() {
               <Textarea rows={20} value={output} onChange={(e) => setOutput(e.target.value)} className="font-medium" dir="auto" />
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => { navigator.clipboard.writeText(output); toast.success("تم النسخ"); }} className="gap-1"><Copy className="h-4 w-4" /> نسخ</Button>
-                <Button variant="outline" onClick={() => window.print()} className="gap-1">طباعة</Button>
+                <Button variant="outline" onClick={() => {
+                  const w = window.open("", "_blank", "width=900,height=700");
+                  if (!w) return;
+                  w.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${subject} — ${topic}</title>
+                    <style>
+                      @page { size: A4; margin: 18mm 15mm; }
+                      html,body { background:#fff; color:#111; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+                      body { padding: 0; margin: 0; line-height: 1.85; font-size: 13pt; }
+                      h1 { font-size: 18pt; margin: 0 0 6pt; }
+                      .meta { color:#555; font-size: 11pt; margin-bottom: 12pt; border-bottom:1px solid #ddd; padding-bottom:8pt; }
+                      pre { white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: 13pt; margin: 0; }
+                    </style></head><body>
+                    <h1>${subject}${topic ? " — " + topic : ""}</h1>
+                    <div class="meta">${grade ? "الصف: " + grade + " · " : ""}المدة: ${duration} دقيقة · ${new Date().toLocaleDateString("ar-BH")}</div>
+                    <pre></pre></body></html>`);
+                  w.document.close();
+                  const pre = w.document.querySelector("pre");
+                  if (pre) pre.textContent = output;
+                  w.focus();
+                  setTimeout(() => { w.print(); }, 300);
+                }} className="gap-1">طباعة</Button>
                 <Button onClick={() => save.mutate()} disabled={save.isPending} className="gap-1 gradient-primary text-primary-foreground"><Save className="h-4 w-4" /> حفظ</Button>
               </div>
             </>
