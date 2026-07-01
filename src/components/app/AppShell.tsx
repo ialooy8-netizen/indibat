@@ -6,7 +6,7 @@ import { useRoles, type AppRole, ROLE_LABELS, setDemoRole } from "@/hooks/useRol
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Users, GraduationCap, ClipboardCheck, Calendar, Building2,
-  Printer, FileText, BarChart3, Settings, UserCog, LogOut, Menu, Brain, Megaphone, X, Sparkles, Eye,
+  Printer, FileText, BarChart3, Settings, UserCog, LogOut, Menu, Brain, Megaphone, X, Sparkles, Eye, MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ import { useBranding } from "@/hooks/useBranding";
 import { LiveClock } from "@/components/app/LiveClock";
 import { AboutDialog } from "@/components/app/AboutDialog";
 import { StaffNoticesBanner } from "@/components/app/StaffNoticesBanner";
+import { PinnedCircularsTop } from "@/components/app/PinnedCircularsTop";
 
 type NavItem = { to: string; label: string; icon: React.ComponentType<{ className?: string }>; badge?: "leaves" | "prints" };
 
@@ -28,6 +29,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: "/print", label: "المطبوعات", icon: Printer, badge: "prints" },
   { to: "/predictor", label: "المتنبئ السلوكي", icon: Brain },
   { to: "/circulars", label: "التعاميم", icon: Megaphone },
+  { to: "/chat", label: "غرفة الموظفين", icon: MessageSquare },
   { to: "/lesson-planner", label: "مخطط الدروس AI", icon: Sparkles },
   { to: "/reports", label: "التقارير", icon: BarChart3 },
 ];
@@ -50,6 +52,7 @@ const NAV_BY_ROLE: Record<AppRole, NavItem[]> = {
     { to: "/print", label: "طلب طباعة", icon: Printer },
     { to: "/leaves", label: "طلب إجازة", icon: FileText },
     { to: "/circulars", label: "التعاميم", icon: Megaphone },
+    { to: "/chat", label: "غرفة الموظفين", icon: MessageSquare },
   ],
   // Printer is staff only — no student/attendance/timetables access
   print_manager: [
@@ -58,6 +61,7 @@ const NAV_BY_ROLE: Record<AppRole, NavItem[]> = {
     { to: "/facilities", label: "حجز المرافق", icon: Building2 },
     { to: "/leaves", label: "طلب إجازة", icon: FileText },
     { to: "/circulars", label: "التعاميم", icon: Megaphone },
+    { to: "/chat", label: "غرفة الموظفين", icon: MessageSquare },
   ],
 };
 
@@ -122,7 +126,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="p-5 border-b border-border/50 text-center">
         <img src={logoUrl} alt="EduPulse | نبض" className="mx-auto h-16 object-contain mb-2" />
         <h1 className="text-xl font-extrabold text-gradient leading-tight">EduPulse | نبض</h1>
-        <p className="text-[10px] text-muted-foreground mt-1">الذكاء الذي يرصد نبض المدرسة</p>
         <div className="mt-2 flex justify-center"><LiveClock /></div>
       </div>
       {isReallyMaster && demoRole && (
@@ -198,6 +201,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <LiveClock compact />
         </header>
         <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
+          <PinnedCircularsTop />
           <StaffNoticesBanner />
           {children}
         </div>
