@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Megaphone, Plus, Trash2, Paperclip, FileDown } from "lucide-react";
+import { Megaphone, Plus, Trash2, Paperclip, FileDown, Pin, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { uploadAttachment, getAttachmentUrl, deleteAttachment } from "@/lib/storage";
+import { FeatureHelp } from "@/components/app/FeatureHelp";
 
 export const Route = createFileRoute("/_authenticated/circulars")({
   component: CircularsPage,
@@ -23,7 +24,9 @@ function CircularsPage() {
   const list = useQuery({
     queryKey: ["circulars"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("circulars").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("circulars").select("*")
+        .order("pinned", { ascending: false })
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -50,16 +53,29 @@ function CircularsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-3xl font-bold flex items-center gap-2"><Megaphone className="h-7 w-7 text-primary" /> التعاميم</h2>
+        <h2 className="text-3xl font-bold flex items-center gap-2">
+          <Megaphone className="h-7 w-7 text-primary" /> التعاميم
+          <FeatureHelp title="التعاميم">
+            <p>يمكنك نشر تعميم لجميع الموظفين بأحد نوعين:</p>
+            <p>• <b>مثبّت</b> — يظل ظاهراً في أعلى كل الصفحات حتى تحذفه يدوياً.</p>
+            <p>• <b>عام</b> — يُحذف تلقائياً بعد 24 ساعة من نشره.</p>
+          </FeatureHelp>
+        </h2>
         {isAdmin && <NewCircular onSaved={() => qc.invalidateQueries({ queryKey: ["circulars"] })} />}
       </div>
 
       <div className="space-y-3">
         {list.data?.map((c) => (
-          <div key={c.id} className="glass rounded-xl p-4">
+          <div key={c.id} className={`glass rounded-xl p-4 ${c.pinned ? "border-r-4 border-accent" : ""}`}>
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
-                <h3 className="font-semibold">{c.title}</h3>
+                <h3 className="font-semibold flex items-center gap-2">
+                  {c.pinned && <span title="مثبّت" className="text-accent"><Pin className="h-4 w-4" /></span>}
+                  {c.title}
+                  {c.pinned
+                    ? <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/20 text-accent">مثبّت</span>
+                    : c.expires_at && <span className="text-[10px] px-2 py-0.5 rounded-full bg-warning/20 text-warning inline-flex items-center gap-1"><Clock className="h-3 w-3" /> ينتهي {new Date(c.expires_at).toLocaleString("ar-BH", { dateStyle: "short", timeStyle: "short" })}</span>}
+                </h3>
                 {c.body && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{c.body}</p>}
                 {c.attachment_path && (
                   <button onClick={() => openAttachment(c.attachment_path!)} className="mt-2 text-primary hover:underline text-sm inline-flex items-center gap-1">

@@ -23,6 +23,7 @@ import { Route as AuthenticatedLessonPlannerRouteImport } from './routes/_authen
 import { Route as AuthenticatedLeavesRouteImport } from './routes/_authenticated.leaves'
 import { Route as AuthenticatedFacilitiesRouteImport } from './routes/_authenticated.facilities'
 import { Route as AuthenticatedCircularsRouteImport } from './routes/_authenticated.circulars'
+import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated.chat'
 import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authenticated.attendance'
 import { Route as AuthenticatedStudentsIdRouteImport } from './routes/_authenticated.students.$id'
 
@@ -96,6 +97,11 @@ const AuthenticatedCircularsRoute = AuthenticatedCircularsRouteImport.update({
   path: '/circulars',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAttendanceRoute = AuthenticatedAttendanceRouteImport.update({
   id: '/attendance',
   path: '/attendance',
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/attendance': typeof AuthenticatedAttendanceRoute
+  '/chat': typeof AuthenticatedChatRoute
   '/circulars': typeof AuthenticatedCircularsRoute
   '/facilities': typeof AuthenticatedFacilitiesRoute
   '/leaves': typeof AuthenticatedLeavesRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/attendance': typeof AuthenticatedAttendanceRoute
+  '/chat': typeof AuthenticatedChatRoute
   '/circulars': typeof AuthenticatedCircularsRoute
   '/facilities': typeof AuthenticatedFacilitiesRoute
   '/leaves': typeof AuthenticatedLeavesRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/attendance': typeof AuthenticatedAttendanceRoute
+  '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/circulars': typeof AuthenticatedCircularsRoute
   '/_authenticated/facilities': typeof AuthenticatedFacilitiesRoute
   '/_authenticated/leaves': typeof AuthenticatedLeavesRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/attendance'
+    | '/chat'
     | '/circulars'
     | '/facilities'
     | '/leaves'
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/attendance'
+    | '/chat'
     | '/circulars'
     | '/facilities'
     | '/leaves'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/attendance'
+    | '/_authenticated/chat'
     | '/_authenticated/circulars'
     | '/_authenticated/facilities'
     | '/_authenticated/leaves'
@@ -320,6 +332,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCircularsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/chat': {
+      id: '/_authenticated/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof AuthenticatedChatRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/attendance': {
       id: '/_authenticated/attendance'
       path: '/attendance'
@@ -352,6 +371,7 @@ const AuthenticatedStudentsRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAttendanceRoute: typeof AuthenticatedAttendanceRoute
+  AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedCircularsRoute: typeof AuthenticatedCircularsRoute
   AuthenticatedFacilitiesRoute: typeof AuthenticatedFacilitiesRoute
   AuthenticatedLeavesRoute: typeof AuthenticatedLeavesRoute
@@ -368,6 +388,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAttendanceRoute: AuthenticatedAttendanceRoute,
+  AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedCircularsRoute: AuthenticatedCircularsRoute,
   AuthenticatedFacilitiesRoute: AuthenticatedFacilitiesRoute,
   AuthenticatedLeavesRoute: AuthenticatedLeavesRoute,
