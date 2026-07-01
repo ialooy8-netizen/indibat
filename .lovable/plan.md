@@ -1,94 +1,86 @@
+## Scope
 
-# Plan: Take Indibat (انضباط) Live
-
-Rebuild the single-file HTML demo as a real multi-user school management web app, keeping the same visual language (glassmorphism, Arabic-first RTL, premium futuristic feel) and the same feature set, but with a real backend, real accounts, and real persistence.
-
-**Cost:** $0 to start. Lovable Cloud has a generous free tier that easily covers 60 staff + 400 students at school-day usage levels. Microsoft sign-in is free.
-
-**Scale target:** 60 staff users, 400 student records, 1 school.
+~25 features across UI polish, backend, and integrations. To keep quality up and let you test as we go, I'll ship in 5 phases. You approve this plan once; I execute Phase 1 → 5 without stopping unless a blocker requires your input (e.g. connecting Twilio/OneDrive).
 
 ---
 
-## 1. Backend (Lovable Cloud)
+## Phase 1 — Communication & notifications (ships first)
 
-Enable Lovable Cloud and create the following tables (Postgres, with Row Level Security):
-
-- `classes` — id, name
-- `students` — id, class_id, name, parent_phone, behavior_points, etc.
-- `attendance` — id, student_id, date, period, status, recorded_by
-- `behavior_incidents` — id, student_id, type (reward/infraction), points, severity, note, teacher_id, date
-- `parent_comms_log` — id, student_id, type, sender_id, timestamp
-- `resource_bookings` — id, employee_id, resource, day, period, status, unseen_admin
-- `leave_requests` — id, employee_id, reason, status, dates
-- `print_requests` — id, employee_id, file_url, copies, status
-- `circulars` — id, title, file_url, posted_by, date
-- `timetables` — id, scope (class/teacher), payload
-- `facility_config` — periods per day, working days, etc. (Master-editable)
-- `profiles` — links to auth user, stores display name + Microsoft email
-- `user_roles` — separate table (security best practice): user_id, role enum (`master`, `principal`, `teacher`, `print_manager`)
-
-All role checks done via a `has_role()` SECURITY DEFINER function and enforced in RLS — never trusted from the client.
-
-## 2. Authentication (Microsoft ministry accounts)
-
-- Microsoft (Azure AD) sign-in via Lovable Cloud's SAML SSO / OIDC provider so staff log in with their existing ministry email — no new passwords.
-- First sign-in creates a `profiles` row automatically (DB trigger). Master assigns the role from the User Accounts screen before the user gets access to anything sensitive.
-- No public sign-up — the auth page only offers "Sign in with Microsoft".
-
-## 3. Frontend rebuild (TanStack Start + React, RTL Arabic)
-
-Port every section from the demo into proper routes, preserving the design language:
-
-- `/auth` — Microsoft sign-in
-- `/` — role-aware dashboard (sidebar order driven by role, exactly as in the spec)
-- `/attendance` — Fast Attendance & Rewards Grid (teacher's main screen)
-- `/students` — student list + profile cards with live stats & timeline
-- `/students/import` — single entry / bulk paste / Excel upload (SheetJS)
-- `/behavior/predictor` — AI Behavior Predictor + WhatsApp gateway button
-- `/timetables`, `/facilities`, `/leaves`, `/print`, `/circulars`, `/reports`, `/settings`, `/users`
-- Notification badges in the sidebar driven by live counts from the DB.
-- Charts via Chart.js / Recharts. WhatsApp links via `https://wa.me/`. File previews via Base64 or Lovable Cloud Storage.
-- Full Arabic RTL, glassmorphism styling matching the demo.
-
-## 4. Hosting & deployment
-
-Published on Lovable's free `.lovable.app` subdomain. Optional custom domain later. Backend changes deploy automatically; frontend changes go live via the Publish button.
-
-## 5. What stays free
-
-- Lovable Cloud free tier: database, auth, storage, edge functions
-- Microsoft sign-in: free (uses the tenant the ministry already provides)
-- WhatsApp via `wa.me/` links: free (opens user's WhatsApp Web/app)
-- Hosting on `.lovable.app`: free
-
-## 6. Out of scope for v1 (can add later)
-
-- Native mobile apps
-- Push notifications
-- Direct SharePoint/OneDrive sync (can be added via the Microsoft connector if desired)
-- Real WhatsApp Business API (paid)
+1. **Staff chat** — new page, realtime, message-type flag (`message` vs `question` rendered in a different color). Master picks retention: manual / 24h auto-purge / N-day auto-purge. Cron via pg_cron.
+2. **Circulars pinned to top of every page** — replaces current banner. Two types: `pinned` (stays until deleted) and `general` (auto-expires 24h). Principal/vice chooses at post time.
+3. **Attendance-not-submitted alert (principal/vice)** — homepage widget: today's date → any class with no attendance row → shows class + assigned teacher + phone + one-tap WhatsApp reminder with class name pre-filled.
+4. **Approval notifications on homepage** — leave approved/rejected and print-ready appear on requester's home with timestamp, approver name, and reason (for rejections). Uses realtime.
+5. **Remove tagline** ("الذكاء الذي يرصد نبض المدرسة") from AppShell header; keep only on homepage hero.
+6. **Remove greeting logo** next to "أهلاً …".
 
 ---
 
-## Build order (so it's usable fast)
+## Phase 2 — Master control panel
 
-1. Enable Cloud + Microsoft sign-in + roles + profiles
-2. Students / classes / Excel import
-3. Attendance + Behavior grid (teacher's daily-use screen)
-4. Student profile cards + timeline
-5. Principal dashboard + AI predictor + WhatsApp gateway
-6. Facility booking matrix + leaves + print + circulars
-7. Reports hub + settings + user management
+7. **Create user from dashboard** (no self-registration needed) via Auth Admin API.
+8. **Disable/suspend features** — `feature_flags` table, per-feature toggle + custom suspend message.
+9. **Edit app name** & **About text/contact** from Settings → Branding.
+10. **Upload school header, footer, and per-approver signatures** — used in all generated PDFs. Header goes in Branding; signatures go on each approver's profile (upload UI in Users panel for master, own profile for principal/vice).
+11. **Feature-info popups** — small (?) button next to each homepage feature card → dialog with usage explanation. Content editable by master.
+12. **Medical/chronic info on student profile** — new fields (`medical_conditions`, `emergency_steps`) master-editable, visible to all staff.
 
 ---
 
-## Technical notes (for reference)
+## Phase 3 — Smart features
 
-- TanStack Start (React 19, Vite 7) with file-based routing under `src/routes/`
-- Tailwind v4, RTL via `<html dir="rtl" lang="ar">`
-- Supabase under the hood (Lovable Cloud); roles enforced via RLS + `has_role()` SECURITY DEFINER, never client-side
-- Microsoft sign-in configured via `supabase--configure_social_auth` (Azure AD); requires one-time tenant app registration — I'll provide the exact redirect URI to paste into the Azure portal
-- SheetJS for `.xlsx` parsing client-side
-- Charts via Recharts (already in the stack)
+13. **Event documentation (توثيق فعالية)** — teacher submits `event_name` + `description`; principal/vice approves or requests edits. On approval → generate PDF with school header, dates, description, approver signature, EduPulse footer. Stored & visible to submitter + principal.
+14. **Smarter behavior predictor** — combined risk score = behavior points + attendance rate (weighted). New visualization: risk trend chart per student, class heatmap, top-5 improving/declining. Better UI with progress rings + sparklines.
+15. **Teacher homepage: today's schedule** with live "next class in X min" timer; upcoming class highlighted; remove full-week from homepage (keep it under الجدول).
+16. **Circulars pinned at top of every page** (covered in Phase 1).
+17. **Smarter reports** — filter builder: type (student / class / teacher / daily / weekly / date range) → generates on-screen table + printable PDF with school header.
+18. **Schedule 3-tab view** — Own / Daily-by-class / Full-school. Master can upload an image of the schedule as an alternative to building it manually.
+19. **Facility daily grid** — hour-slot table showing available/booked slots with booker name and time.
+20. **Fix lesson planner print clipping** — proper `@page` margins, page-break rules, print-only stylesheet.
 
-Ready to start with step 1 (enable Cloud + Microsoft auth + roles + first screens) on your approval.
+---
+
+## Phase 4 — Data seeding & polish
+
+21. **Expanded demo data** — sample attendance (7 days), print requests, leave requests (some approved/rejected), event submissions, behavior incidents spanning severity levels, bookings.
+22. **Remove class comparison chart** (الغياب والتأخر آخر 30 يوم).
+23. **UI polish pass** — verify homepage cards, spacing, RTL, mobile.
+
+---
+
+## Phase 5 — Integrations (require your action)
+
+24. **OneDrive optional archive** — Master-only "Archive to OneDrive" button on generated PDFs. Requires you to connect your ministry Microsoft account via the connector when we get to this step. I'll pause and prompt you.
+25. **SMS via Twilio** — "Send SMS" button next to every "Send WhatsApp" button (leave/print approvals, attendance reminders, parent behavior alerts). Requires you to:
+   - Connect Twilio via the connector
+   - Provide a Twilio phone number capable of sending to Bahrain (+973)
+   - Fund the Twilio account
+   I'll pause and prompt you when we reach this step. Cost: ~$0.03–0.08 per SMS.
+
+---
+
+## Technical notes
+
+- **New tables:** `chat_messages`, `chat_settings`, `feature_flags`, `event_submissions`, `notifications`, `feature_help` (for popups). Extends: `students` (medical), `profiles` (signature_url), `circulars` (pinned bool + auto-expire), `app_settings` (app_name, header_url, footer_config, about_content).
+- **New server fns:** `admin.createUser`, `admin.setFeatureFlag`, `events.submit/approve/reject`, `events.generatePdf`, `reports.build`, `notifications.markRead`, `chat.purge` (cron).
+- **PDF generation:** server-side using `pdf-lib` (Worker-compatible). Header image + signature composited per doc.
+- **Realtime:** Supabase channels for chat, notifications, circulars.
+- **Auto-expire (24h circulars, chat retention):** `pg_cron` scheduled jobs.
+
+## What I need from you mid-flight
+
+- **Phase 5 only:** connect Twilio + OneDrive when I prompt. Everything before Phase 5 runs without interruption.
+
+## Not doing (out of scope unless you ask)
+
+- Removing "first account becomes master" — already done in a previous turn; will verify.
+- Changing app name from EduPulse — Phase 2 makes it master-editable but I won't rename it myself.
+
+## Suggested additions (tell me yes/no, will not build without approval)
+
+- **Parent portal** (read-only) — parents log in with their phone to see their child's attendance/behavior/circulars.
+- **AI weekly digest** — every Sunday, AI summarizes each class's week for the principal (attendance trend, top incidents, top improvers).
+- **Substitute teacher auto-suggest** — when a teacher submits leave, AI suggests available substitutes based on schedule gaps.
+- **Voice-to-text incident logging** — teacher taps mic, dictates incident, AI structures it into the form.
+- **QR-code attendance** — student shows QR badge, teacher scans with phone camera; useful for high schools.
+
+Reply "go" to start Phase 1, or edit the plan.
