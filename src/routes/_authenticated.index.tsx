@@ -3,12 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRoles, welcomeFor } from "@/hooks/useRoles";
-import { useBranding } from "@/hooks/useBranding";
 import { AboutDialog } from "@/components/app/AboutDialog";
-import { Users, GraduationCap, AlertTriangle, TrendingUp, Megaphone, ClipboardCheck, FileText, Printer, Sparkles, Calendar as CalendarIcon } from "lucide-react";
+import { NotificationsFeed } from "@/components/app/NotificationsFeed";
+import { TeacherTodaySchedule } from "@/components/app/TeacherTodaySchedule";
+import { MissingAttendanceCard } from "@/components/app/MissingAttendanceCard";
+import { FeatureHelp } from "@/components/app/FeatureHelp";
+import { Users, GraduationCap, AlertTriangle, TrendingUp, Megaphone, ClipboardCheck, FileText, Printer, Sparkles, Calendar as CalendarIcon, MessageSquare } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
-  RadialBarChart, RadialBar, PolarAngleAxis, BarChart, Bar, Legend,
+  RadialBarChart, RadialBar, PolarAngleAxis,
 } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -18,7 +21,6 @@ export const Route = createFileRoute("/_authenticated/")({
 function Dashboard() {
   const { user } = useAuth();
   const { isAdmin, isTeacher, isPrintManager, roles } = useRoles();
-  const { homeLogoUrl } = useBranding();
   const today = new Date().toISOString().slice(0, 10);
   const role = roles[0] ?? null;
 
@@ -50,7 +52,6 @@ function Dashboard() {
     },
   });
 
-  // 14-day attendance trend (admin)
   const trend = useQuery({
     queryKey: ["dashboard-trend"],
     enabled: isAdmin,
@@ -76,7 +77,6 @@ function Dashboard() {
     },
   });
 
-  // Behavior distribution (admin)
   const behavior = useQuery({
     queryKey: ["dashboard-behavior"],
     enabled: isAdmin,
@@ -98,38 +98,6 @@ function Dashboard() {
         { name: "إنذار (50-69)", value: buckets.warning, pct: Math.round((buckets.warning / total) * 100), fill: "var(--warning)" },
         { name: "خطر (<50)", value: buckets.risk, pct: Math.round((buckets.risk / total) * 100), fill: "var(--destructive)" },
       ];
-    },
-  });
-
-  // Class comparison (admin) — absences last 30 days
-  const byClass = useQuery({
-    queryKey: ["dashboard-by-class"],
-    enabled: isAdmin,
-    queryFn: async () => {
-      const from = new Date(); from.setDate(from.getDate() - 30);
-      const { data, error } = await supabase
-        .from("attendance")
-        .select("status, students(classes(name))")
-        .gte("date", from.toISOString().slice(0, 10));
-      if (error) throw error;
-      const map = new Map<string, { name: string; absent: number; late: number }>();
-      for (const r of (data ?? []) as Array<{ status: string; students: { classes: { name: string } | null } | null }>) {
-        const cls = r.students?.classes?.name ?? "بدون صف";
-        const cur = map.get(cls) ?? { name: cls, absent: 0, late: 0 };
-        if (r.status === "absent") cur.absent++;
-        else if (r.status === "late") cur.late++;
-        map.set(cls, cur);
-      }
-      return Array.from(map.values()).sort((a, b) => b.absent - a.absent).slice(0, 6);
-    },
-  });
-
-  const circulars = useQuery({
-    queryKey: ["latest-circulars-home"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("circulars").select("id, title, body, created_at").order("created_at", { ascending: false }).limit(3);
-      if (error) throw error;
-      return data;
     },
   });
 
@@ -170,8 +138,7 @@ function Dashboard() {
       {/* Hero */}
       <div className="glass-strong rounded-2xl p-6 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ background: "radial-gradient(circle at 20% 0%, var(--primary) 0%, transparent 50%), radial-gradient(circle at 80% 100%, var(--accent) 0%, transparent 50%)" }} />
-        <div className="relative flex flex-wrap items-center gap-6">
-          <img src={homeLogoUrl} alt="EduPulse | نبض" className="h-24 md:h-28 object-contain shrink-0" />
+        <div className="relative flex flex-wrap items-center gap-4">
           <div className="flex-1 min-w-[200px]">
             <h2 className="text-2xl md:text-3xl font-bold">{welcomeFor(role, profile.data?.full_name)} 👋</h2>
             <p className="text-muted-foreground mt-1 text-sm">{new Date().toLocaleDateString("ar-BH", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
@@ -192,10 +159,15 @@ function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Attendance trend */}
             <div className="lg:col-span-2 glass rounded-2xl p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> اتجاه الحضور — آخر 14 يوم</h3>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" /> اتجاه الحضور — آخر 14 يوم
+                  <FeatureHelp title="اتجاه الحضور">
+                    <p>مخطط يعرض عدد الحضور والغياب والتأخر لكل يوم خلال آخر أسبوعين.</p>
+                    <p>نسبة الحضور تُحسب من مجموع السجلات: (حضور + متأخر) ÷ الإجمالي.</p>
+                  </FeatureHelp>
+                </h3>
                 <span className="text-xs text-muted-foreground">نسبة الحضور: <span className="text-primary font-bold tabular-nums">{attendanceRate}%</span></span>
               </div>
               <div className="h-64">
@@ -223,9 +195,14 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Behavior radial */}
             <div className="glass rounded-2xl p-5">
-              <h3 className="font-semibold mb-3 flex items-center gap-2"><Sparkles className="h-4 w-4 text-accent" /> توزيع نقاط السلوك</h3>
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-accent" /> توزيع نقاط السلوك
+                <FeatureHelp title="توزيع نقاط السلوك">
+                  <p>يوزّع الطلاب على 4 فئات وفق نقاط السلوك: ممتاز، جيد، إنذار، وخطر.</p>
+                  <p>يُساعدك على تحديد نسبة الطلاب المحتاجين لتدخّل تربوي.</p>
+                </FeatureHelp>
+              </h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadialBarChart innerRadius="25%" outerRadius="95%" data={behavior.data ?? []} startAngle={90} endAngle={-270}>
@@ -248,43 +225,26 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* By-class comparison */}
-          <div className="glass rounded-2xl p-5">
-            <h3 className="font-semibold mb-3 flex items-center gap-2"><BarChartIcon /> مقارنة الصفوف — الغياب والتأخر (آخر 30 يوم)</h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={byClass.data ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
-                  <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={11} />
-                  <YAxis stroke="var(--muted-foreground)" fontSize={11} />
-                  <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="absent" name="غياب" fill="var(--destructive)" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="late" name="تأخر" fill="var(--warning)" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          {/* Missing attendance + Notifications side-by-side (admin) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <MissingAttendanceCard />
+            <NotificationsFeed />
           </div>
         </>
       )}
 
-      {/* Latest announcements */}
-      <div className="glass rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold flex items-center gap-2"><Megaphone className="h-5 w-5 text-accent" /> آخر التعاميم</h3>
-          <Link to="/circulars" className="text-sm text-primary hover:underline">الكل ←</Link>
+      {/* Teacher today's schedule */}
+      {isTeacher && !isAdmin && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <TeacherTodaySchedule />
+          <NotificationsFeed />
         </div>
-        {circulars.data?.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">لا توجد تعاميم.</p>}
-        <div className="space-y-3">
-          {circulars.data?.map((c) => (
-            <div key={c.id} className="border-r-2 border-accent/40 pr-3">
-              <div className="font-semibold">{c.title}</div>
-              {c.body && <p className="text-sm text-muted-foreground line-clamp-2">{c.body}</p>}
-              <div className="text-xs text-muted-foreground mt-1">{new Date(c.created_at).toLocaleDateString("ar-BH")}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
+
+      {/* Print manager notifications */}
+      {isPrintManager && !isAdmin && !isTeacher && (
+        <NotificationsFeed />
+      )}
 
       {/* Quick actions per role */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -295,12 +255,15 @@ function Dashboard() {
         {isPrintManager && <QuickAction to="/print" icon={Printer} label="قائمة الطباعة" tone="primary" />}
         {isAdmin && <QuickAction to="/students" icon={GraduationCap} label="إدارة الطلاب" tone="accent" />}
         {isAdmin && <QuickAction to="/circulars" icon={Megaphone} label="نشر تعميم" tone="warning" />}
+        <QuickAction to="/chat" icon={MessageSquare} label="غرفة الموظفين" tone="accent" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {(isTeacher || isAdmin) && (
           <div className="glass rounded-2xl p-5">
-            <h3 className="font-semibold mb-3">طلباتي المعلّقة</h3>
+            <h3 className="font-semibold mb-3 flex items-center gap-2">طلباتي المعلّقة
+              <FeatureHelp title="طلباتي المعلّقة"><p>عدد طلباتك التي لا تزال قيد المراجعة (إجازات ومطبوعات).</p></FeatureHelp>
+            </h3>
             <div className="space-y-2 text-sm">
               <Row label="إجازات قيد المراجعة" value={myPending.data?.leaves ?? 0} />
               <Row label="مطبوعات معلقة" value={myPending.data?.prints ?? 0} />
@@ -309,7 +272,9 @@ function Dashboard() {
         )}
 
         <div className="glass rounded-2xl p-5">
-          <h3 className="font-semibold mb-3 flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-primary" /> الحجوزات القادمة</h3>
+          <h3 className="font-semibold mb-3 flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-primary" /> الحجوزات القادمة
+            <FeatureHelp title="الحجوزات القادمة"><p>أقرب 5 حجوزات لمرافق المدرسة (قاعة، مسرح، مختبر...) اعتباراً من اليوم.</p></FeatureHelp>
+          </h3>
           {upcoming.data?.length === 0 && <p className="text-sm text-muted-foreground">لا توجد حجوزات قادمة.</p>}
           <div className="space-y-2 text-sm">
             {upcoming.data?.map((b) => (
@@ -321,12 +286,11 @@ function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Teacher: also show notifications feed if not shown above */}
+      {!isAdmin && !isTeacher && !isPrintManager && <NotificationsFeed />}
     </div>
   );
-}
-
-function BarChartIcon() {
-  return <TrendingUp className="h-4 w-4 text-primary" />;
 }
 
 function Row({ label, value }: { label: string; value: number }) {
@@ -338,6 +302,21 @@ function Row({ label, value }: { label: string; value: number }) {
   );
 }
 
+function StatCard({ icon: Icon, label, value, tone }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; tone: "primary" | "accent" | "warning" | "destructive" }) {
+  const toneClass = { primary: "text-primary", accent: "text-accent", warning: "text-warning", destructive: "text-destructive" }[tone];
+  return (
+    <div className="glass rounded-2xl p-5 flex items-center gap-4">
+      <div className={`h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center ${toneClass}`}>
+        <Icon className="h-6 w-6" />
+      </div>
+      <div>
+        <div className="text-2xl font-extrabold tabular-nums">{value}</div>
+        <div className="text-xs text-muted-foreground">{label}</div>
+      </div>
+    </div>
+  );
+}
+
 function QuickAction({ to, icon: Icon, label, tone }: { to: string; icon: React.ComponentType<{ className?: string }>; label: string; tone: "primary" | "accent" | "warning" }) {
   const toneClass = { primary: "text-primary", accent: "text-accent", warning: "text-warning" }[tone];
   return (
@@ -345,19 +324,5 @@ function QuickAction({ to, icon: Icon, label, tone }: { to: string; icon: React.
       <Icon className={`h-6 w-6 ${toneClass}`} />
       <span className="text-sm font-medium">{label}</span>
     </Link>
-  );
-}
-
-function StatCard({ icon: Icon, label, value, tone }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; tone: "primary" | "accent" | "warning" | "destructive" }) {
-  const toneClass = { primary: "text-primary", accent: "text-accent", warning: "text-warning", destructive: "text-destructive" }[tone];
-  return (
-    <div className="glass rounded-2xl p-4 relative overflow-hidden group">
-      <div className="absolute -top-6 -left-6 w-20 h-20 rounded-full opacity-10 blur-xl group-hover:opacity-20 transition" style={{ background: `currentColor` }} />
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <Icon className={`h-5 w-5 ${toneClass}`} />
-      </div>
-      <div className="text-3xl font-extrabold tabular-nums">{value}</div>
-    </div>
   );
 }

@@ -123,13 +123,39 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          kind: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          kind?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+        }
+        Relationships: []
+      }
       circulars: {
         Row: {
           attachment_path: string | null
           body: string | null
           created_at: string
+          expires_at: string | null
           file_url: string | null
           id: string
+          pinned: boolean
           posted_by: string | null
           title: string
         }
@@ -137,8 +163,10 @@ export type Database = {
           attachment_path?: string | null
           body?: string | null
           created_at?: string
+          expires_at?: string | null
           file_url?: string | null
           id?: string
+          pinned?: boolean
           posted_by?: string | null
           title: string
         }
@@ -146,8 +174,10 @@ export type Database = {
           attachment_path?: string | null
           body?: string | null
           created_at?: string
+          expires_at?: string | null
           file_url?: string | null
           id?: string
+          pinned?: boolean
           posted_by?: string | null
           title?: string
         }
@@ -230,6 +260,48 @@ export type Database = {
           resources?: string[]
           updated_at?: string
           working_days?: string[]
+        }
+        Relationships: []
+      }
+      feature_flags: {
+        Row: {
+          enabled: boolean
+          key: string
+          message: string | null
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          key: string
+          message?: string | null
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          key?: string
+          message?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      feature_help: {
+        Row: {
+          content: string
+          key: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          key: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          key?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -329,6 +401,42 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          kind: string
+          link: string | null
+          metadata: Json
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          link?: string | null
+          metadata?: Json
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          link?: string | null
+          metadata?: Json
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       parent_comms_log: {
         Row: {
           created_at: string
@@ -422,6 +530,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          signature_url: string | null
           updated_at: string
         }
         Insert: {
@@ -430,6 +539,7 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          signature_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -438,6 +548,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          signature_url?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -525,6 +636,8 @@ export type Database = {
           gender: string | null
           id: string
           is_demo: boolean
+          medical_conditions: string | null
+          medical_steps: string | null
           name: string
           national_id: string | null
           notes: string | null
@@ -539,6 +652,8 @@ export type Database = {
           gender?: string | null
           id?: string
           is_demo?: boolean
+          medical_conditions?: string | null
+          medical_steps?: string | null
           name: string
           national_id?: string | null
           notes?: string | null
@@ -553,6 +668,8 @@ export type Database = {
           gender?: string | null
           id?: string
           is_demo?: boolean
+          medical_conditions?: string | null
+          medical_steps?: string | null
           name?: string
           national_id?: string | null
           notes?: string | null
