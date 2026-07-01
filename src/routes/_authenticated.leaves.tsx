@@ -52,9 +52,22 @@ function LeavesPage() {
   }, [isAdmin, list.data, qc]);
 
   const review = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "approved" | "rejected" }) => {
-      const { error } = await supabase.from("leave_requests").update({ status, reviewer_id: user?.id }).eq("id", id);
-      if (error) throw error;
+    mutationFn: async ({ id, status, note }: { id: string; status: "approved" | "rejected"; note?: string }) => {
+      const { data: row, error: uErr } = await supabase.from("leave_requests")
+        .update({ status, reviewer_id: user?.id }).eq("id", id).select("employee_id, leave_type, start_date").maybeSingle();
+      if (uErr) throw uErr;
+      if (row) {
+        const reviewerName = (await supabase.from("profiles").select("full_name").eq("id", user!.id).maybeSingle()).data?.full_name ?? "الإدارة";
+        const isApproved = status === "approved";
+        await supabase.from("notifications").insert({
+          user_id: row.employee_id,
+          kind: isApproved ? "leave_approved" : "leave_rejected",
+          title: isApproved ? "تم اعتماد طلب إجازتك ✅" : "تم رفض طلب إجازتك ❌",
+          body: `${isApproved ? "اعتُمد" : "رُفض"} طلبك بتاريخ ${row.start_date} من قِبل ${reviewerName}${note ? `\nملاحظة: ${note}` : ""}`,
+          link: "/leaves",
+          metadata: { leave_id: id, reviewer_id: user?.id, at: new Date().toISOString() },
+        });
+      }
     },
     onSuccess: () => { toast.success("تم"); qc.invalidateQueries({ queryKey: ["leaves"] }); },
   });

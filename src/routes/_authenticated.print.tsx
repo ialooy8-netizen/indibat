@@ -57,11 +57,22 @@ function PrintPage() {
 
   const review = useMutation({
     mutationFn: async ({ id, status, principalOk }: { id: string; status: "pending" | "pending_principal" | "approved" | "printed" | "rejected"; principalOk?: boolean }) => {
-      const { error } = await supabase.from("print_requests").update({
+      const { data: row, error } = await supabase.from("print_requests").update({
         status,
         ...(principalOk ? { principal_approved_at: new Date().toISOString(), principal_approved_by: user?.id } : {}),
-      }).eq("id", id);
+      }).eq("id", id).select("employee_id, title").maybeSingle();
       if (error) throw error;
+      if (row && (status === "printed" || status === "rejected")) {
+        const isPrinted = status === "printed";
+        await supabase.from("notifications").insert({
+          user_id: row.employee_id,
+          kind: isPrinted ? "print_ready" : "print_rejected",
+          title: isPrinted ? "طلب الطباعة جاهز للاستلام 🖨️" : "تم رفض طلب الطباعة",
+          body: isPrinted ? `مستندك "${row.title}" جاهز للاستلام من مكتب الطباعة.` : `تم رفض طلب "${row.title}".`,
+          link: "/print",
+          metadata: { print_id: id, at: new Date().toISOString() },
+        });
+      }
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["prints"] }); toast.success("تم"); },
   });

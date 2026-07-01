@@ -100,14 +100,20 @@ function NewCircular({ onSaved }: { onSaved: () => void }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [mode, setMode] = useState<"pinned" | "general">("general");
   const save = useMutation({
     mutationFn: async () => {
       let attachment_path: string | null = null;
       if (file) attachment_path = await uploadAttachment(file, "circulars");
-      const { error } = await supabase.from("circulars").insert({ title, body, posted_by: user?.id, attachment_path });
+      const expires_at = mode === "general" ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : null;
+      const { error } = await supabase.from("circulars").insert({
+        title, body, posted_by: user?.id, attachment_path,
+        pinned: mode === "pinned",
+        expires_at,
+      });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("تم النشر"); setOpen(false); setTitle(""); setBody(""); setFile(null); onSaved(); },
+    onSuccess: () => { toast.success("تم النشر"); setOpen(false); setTitle(""); setBody(""); setFile(null); setMode("general"); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
   });
   return (
@@ -116,6 +122,21 @@ function NewCircular({ onSaved }: { onSaved: () => void }) {
       <DialogContent>
         <DialogHeader><DialogTitle>تعميم جديد</DialogTitle></DialogHeader>
         <div className="space-y-3">
+          <div>
+            <Label>نوع التعميم</Label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <button type="button" onClick={() => setMode("pinned")}
+                className={`rounded-xl border p-3 text-right text-sm transition ${mode === "pinned" ? "border-accent bg-accent/10" : "border-border/40 hover:bg-white/5"}`}>
+                <div className="font-bold flex items-center gap-1"><Pin className="h-3.5 w-3.5" /> مثبّت</div>
+                <div className="text-[11px] text-muted-foreground">يبقى ظاهراً حتى تحذفه يدوياً</div>
+              </button>
+              <button type="button" onClick={() => setMode("general")}
+                className={`rounded-xl border p-3 text-right text-sm transition ${mode === "general" ? "border-primary bg-primary/10" : "border-border/40 hover:bg-white/5"}`}>
+                <div className="font-bold flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> عام (24 ساعة)</div>
+                <div className="text-[11px] text-muted-foreground">يُحذف تلقائياً بعد يوم</div>
+              </button>
+            </div>
+          </div>
           <div><Label>العنوان</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
           <div><Label>المحتوى</Label><Textarea rows={6} value={body} onChange={(e) => setBody(e.target.value)} /></div>
           <div>
@@ -131,3 +152,4 @@ function NewCircular({ onSaved }: { onSaved: () => void }) {
     </Dialog>
   );
 }
+
