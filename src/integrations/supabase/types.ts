@@ -147,6 +147,27 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_settings: {
+        Row: {
+          id: number
+          retention_days: number
+          retention_mode: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          retention_days?: number
+          retention_mode?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          retention_days?: number
+          retention_mode?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       circulars: {
         Row: {
           attachment_path: string | null
@@ -235,6 +256,51 @@ export type Database = {
           id?: string
           is_demo?: boolean
           name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      event_submissions: {
+        Row: {
+          approved_pdf_url: string | null
+          created_at: string
+          description: string
+          event_name: string
+          id: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          reviewer_note: string | null
+          status: string
+          submitted_at: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_pdf_url?: string | null
+          created_at?: string
+          description: string
+          event_name: string
+          id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          reviewer_note?: string | null
+          status?: string
+          submitted_at?: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_pdf_url?: string | null
+          created_at?: string
+          description?: string
+          event_name?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          reviewer_note?: string | null
+          status?: string
+          submitted_at?: string
+          teacher_id?: string
           updated_at?: string
         }
         Relationships: []
@@ -755,6 +821,7 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      purge_chat_messages: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role:

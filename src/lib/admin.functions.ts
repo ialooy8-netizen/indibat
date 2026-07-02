@@ -51,3 +51,34 @@ export const adminGetAuthUsers = createServerFn({ method: "GET" })
       confirmed: !!u.email_confirmed_at,
     }));
   });
+
+export const adminCreateUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    email: z.string().email(),
+    password: z.string().min(8),
+    fullName: z.string().min(1),
+    phone: z.string().optional(),
+    role: z.enum(["principal","vice_principal","teacher","print_manager"]).optional(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertMaster(context.supabase as any, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: created, error } = await (supabaseAdmin as any).auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { full_name: data.fullName },
+      phone: data.phone || undefined,
+    });
+    if (error) throw new Error(error.message);
+    const uid = created.user.id as string;
+    // Ensure profile has phone (handle_new_user trigger inserts name/email)
+    if (data.phone) {
+      await (supabaseAdmin as any).from("profiles").update({ phone: data.phone, full_name: data.fullName }).eq("id", uid);
+    }
+    if (data.role) {
+      await (supabaseAdmin as any).from("user_roles").insert({ user_id: uid, role: data.role });
+    }
+    return { ok: true, userId: uid };
+  });

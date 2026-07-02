@@ -11,6 +11,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Settings as SettingsIcon, Trash2, UserPlus, Eye, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { seedDemoData, wipeDemoData } from "@/lib/demo.functions";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -27,11 +29,208 @@ function SettingsPage() {
       <h2 className="text-3xl font-bold flex items-center gap-2">
         <SettingsIcon className="h-7 w-7 text-primary" /> الإعدادات
       </h2>
+      <AppNameSection />
+      <AboutSection />
+      <SchoolHeaderSection />
+      <FeatureFlagsSection />
+      <ChatRetentionSection />
       <BrandingSection />
       <DemoModeSection />
       <FacilityConfigSection />
       <ClassTeachersSection />
     </div>
+  );
+}
+
+function AppNameSection() {
+  const qc = useQueryClient();
+  const cur = useQuery({
+    queryKey: ["app-name-cfg"],
+    queryFn: async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "app_name").maybeSingle();
+      return (data?.value as { name: string; tagline: string }) ?? { name: "EduPulse | نبض", tagline: "" };
+    },
+  });
+  const [name, setName] = useState("");
+  const [tagline, setTagline] = useState("");
+  useEffect(() => { if (cur.data) { setName(cur.data.name); setTagline(cur.data.tagline); } }, [cur.data]);
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("app_settings").update({ value: { name, tagline }, updated_at: new Date().toISOString() }).eq("key", "app_name");
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("تم حفظ اسم النظام"); qc.invalidateQueries({ queryKey: ["app-name"] }); qc.invalidateQueries({ queryKey: ["app-name-cfg"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <section className="glass-strong rounded-2xl p-6 space-y-3 border border-primary/30">
+      <h3 className="text-xl font-bold">اسم النظام والشعار النصي</h3>
+      <div><Label>اسم النظام</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+      <div><Label>الشعار النصي (يظهر في الصفحة الرئيسية)</Label><Input value={tagline} onChange={(e) => setTagline(e.target.value)} /></div>
+      <Button onClick={() => save.mutate()} disabled={save.isPending} className="gradient-primary text-primary-foreground">حفظ</Button>
+    </section>
+  );
+}
+
+function AboutSection() {
+  const qc = useQueryClient();
+  const cur = useQuery({
+    queryKey: ["about-cfg"],
+    queryFn: async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "about").maybeSingle();
+      return (data?.value as { body: string; email: string; phone?: string }) ?? { body: "", email: "", phone: "" };
+    },
+  });
+  const [body, setBody] = useState(""); const [email, setEmail] = useState(""); const [phone, setPhone] = useState("");
+  useEffect(() => { if (cur.data) { setBody(cur.data.body); setEmail(cur.data.email); setPhone(cur.data.phone ?? ""); } }, [cur.data]);
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("app_settings").update({ value: { body, email, phone }, updated_at: new Date().toISOString() }).eq("key", "about");
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("تم"); qc.invalidateQueries({ queryKey: ["about-text"] }); qc.invalidateQueries({ queryKey: ["about-cfg"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <section className="glass rounded-2xl p-6 space-y-3">
+      <h3 className="text-xl font-bold">محتوى «عن النظام»</h3>
+      <div><Label>النص</Label><Textarea rows={6} value={body} onChange={(e) => setBody(e.target.value)} /></div>
+      <div className="grid grid-cols-2 gap-2">
+        <div><Label>بريد التواصل</Label><Input dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+        <div><Label>هاتف (اختياري)</Label><Input dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+      </div>
+      <Button onClick={() => save.mutate()} disabled={save.isPending} className="gradient-primary text-primary-foreground">حفظ</Button>
+    </section>
+  );
+}
+
+function SchoolHeaderSection() {
+  const qc = useQueryClient();
+  const cur = useQuery({
+    queryKey: ["school-header-cfg"],
+    queryFn: async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "school_header").maybeSingle();
+      return (data?.value as { headerUrl: string | null; schoolName: string; footerNote: string }) ?? { headerUrl: null, schoolName: "", footerNote: "" };
+    },
+  });
+  const [schoolName, setSchoolName] = useState("");
+  const [footerNote, setFooterNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (cur.data) { setSchoolName(cur.data.schoolName); setFooterNote(cur.data.footerNote); } }, [cur.data]);
+
+  async function upload(file: File) {
+    setBusy(true);
+    try {
+      const path = `branding/school-header-${Date.now()}.${file.name.split(".").pop()}`;
+      const { error: e1 } = await supabase.storage.from("attachments").upload(path, file, { upsert: true });
+      if (e1) throw e1;
+      const { data: s } = await supabase.storage.from("attachments").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+      const next = { headerUrl: s?.signedUrl ?? null, schoolName, footerNote };
+      const { error } = await supabase.from("app_settings").update({ value: next, updated_at: new Date().toISOString() }).eq("key", "school_header");
+      if (error) throw error;
+      toast.success("تم تحديث ترويسة المدرسة");
+      qc.invalidateQueries({ queryKey: ["school-header-cfg"] });
+      qc.invalidateQueries({ queryKey: ["school-header"] });
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(false); }
+  }
+
+  const saveMeta = useMutation({
+    mutationFn: async () => {
+      const next = { headerUrl: cur.data?.headerUrl ?? null, schoolName, footerNote };
+      const { error } = await supabase.from("app_settings").update({ value: next, updated_at: new Date().toISOString() }).eq("key", "school_header");
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("تم"); qc.invalidateQueries({ queryKey: ["school-header-cfg"] }); qc.invalidateQueries({ queryKey: ["school-header"] }); },
+  });
+
+  return (
+    <section className="glass rounded-2xl p-6 space-y-3">
+      <h3 className="text-xl font-bold">ترويسة المدرسة (تظهر في الملفات المطبوعة)</h3>
+      <div className="flex items-center justify-center bg-white/5 rounded-lg p-3" style={{ minHeight: 100 }}>
+        {cur.data?.headerUrl ? <img src={cur.data.headerUrl} alt="" style={{ maxHeight: 100, objectFit: "contain" }} /> : <span className="text-xs text-muted-foreground">لم يتم الرفع</span>}
+      </div>
+      <Input type="file" accept="image/*" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
+      <div><Label>اسم المدرسة</Label><Input value={schoolName} onChange={(e) => setSchoolName(e.target.value)} /></div>
+      <div><Label>نص تذييل (يظهر أسفل الصفحة)</Label><Input value={footerNote} onChange={(e) => setFooterNote(e.target.value)} /></div>
+      <Button onClick={() => saveMeta.mutate()} disabled={saveMeta.isPending} variant="outline">حفظ النصوص</Button>
+    </section>
+  );
+}
+
+function FeatureFlagsSection() {
+  const qc = useQueryClient();
+  const flags = useQuery({
+    queryKey: ["feature-flags-all"],
+    queryFn: async () => (await supabase.from("feature_flags").select("*").order("key")).data ?? [],
+  });
+  const toggle = useMutation({
+    mutationFn: async ({ key, enabled }: { key: string; enabled: boolean }) => {
+      const { error } = await supabase.from("feature_flags").update({ enabled, updated_at: new Date().toISOString() }).eq("key", key);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["feature-flags-all"] }),
+  });
+  const setMsg = useMutation({
+    mutationFn: async ({ key, message }: { key: string; message: string }) => {
+      const { error } = await supabase.from("feature_flags").update({ message, updated_at: new Date().toISOString() }).eq("key", key);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("تم"); qc.invalidateQueries({ queryKey: ["feature-flags-all"] }); },
+  });
+  return (
+    <section className="glass rounded-2xl p-6 space-y-3">
+      <h3 className="text-xl font-bold">تعطيل/تفعيل الميزات</h3>
+      <p className="text-xs text-muted-foreground">عند التعطيل، تظهر رسالتك المخصصة للمستخدم بدلاً من الميزة.</p>
+      <div className="space-y-2">
+        {flags.data?.map((f) => (
+          <div key={f.key} className="glass rounded-xl p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium text-sm">{f.key}</span>
+              <Switch checked={f.enabled} onCheckedChange={(v) => toggle.mutate({ key: f.key, enabled: v })} />
+            </div>
+            {!f.enabled && (
+              <div className="flex gap-2">
+                <Input defaultValue={f.message ?? ""} placeholder="رسالة للمستخدم عند التعطيل..." className="text-xs" onBlur={(e) => { if (e.target.value !== (f.message ?? "")) setMsg.mutate({ key: f.key, message: e.target.value }); }} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ChatRetentionSection() {
+  const qc = useQueryClient();
+  const cur = useQuery({
+    queryKey: ["chat-settings"],
+    queryFn: async () => (await supabase.from("chat_settings").select("*").eq("id", 1).maybeSingle()).data,
+  });
+  const [mode, setMode] = useState<"manual" | "daily" | "custom">("manual");
+  const [days, setDays] = useState(7);
+  useEffect(() => { if (cur.data) { setMode(cur.data.retention_mode as "manual" | "daily" | "custom"); setDays(cur.data.retention_days); } }, [cur.data]);
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("chat_settings").update({ retention_mode: mode, retention_days: days, updated_at: new Date().toISOString() }).eq("id", 1);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("تم"); qc.invalidateQueries({ queryKey: ["chat-settings"] }); },
+  });
+  return (
+    <section className="glass rounded-2xl p-6 space-y-3">
+      <h3 className="text-xl font-bold">سياسة الاحتفاظ برسائل غرفة الموظفين</h3>
+      <div className="flex flex-wrap gap-2">
+        {(["manual","daily","custom"] as const).map((m) => (
+          <Button key={m} variant={mode === m ? "default" : "outline"} onClick={() => setMode(m)}
+            className={mode === m ? "gradient-primary text-primary-foreground" : ""}>
+            {m === "manual" ? "يدوي" : m === "daily" ? "حذف كل 24 ساعة" : "عدد أيام محدد"}
+          </Button>
+        ))}
+      </div>
+      {mode === "custom" && <div><Label>عدد الأيام</Label><Input type="number" min={1} value={days} onChange={(e) => setDays(Number(e.target.value))} /></div>}
+      <Button onClick={() => save.mutate()} disabled={save.isPending} className="gradient-primary text-primary-foreground">حفظ</Button>
+    </section>
   );
 }
 
