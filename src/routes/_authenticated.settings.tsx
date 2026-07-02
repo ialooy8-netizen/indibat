@@ -209,7 +209,7 @@ function ChatRetentionSection() {
   });
   const [mode, setMode] = useState<"manual" | "daily" | "custom">("manual");
   const [days, setDays] = useState(7);
-  useEffect(() => { if (cur.data) { setMode(cur.data.retention_mode); setDays(cur.data.retention_days); } }, [cur.data]);
+  useEffect(() => { if (cur.data) { setMode(cur.data.retention_mode as "manual" | "daily" | "custom"); setDays(cur.data.retention_days); } }, [cur.data]);
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("chat_settings").update({ retention_mode: mode, retention_days: days, updated_at: new Date().toISOString() }).eq("id", 1);
