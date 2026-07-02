@@ -22,6 +22,7 @@ import { Route as AuthenticatedPredictorRouteImport } from './routes/_authentica
 import { Route as AuthenticatedLessonPlannerRouteImport } from './routes/_authenticated.lesson-planner'
 import { Route as AuthenticatedLeavesRouteImport } from './routes/_authenticated.leaves'
 import { Route as AuthenticatedFacilitiesRouteImport } from './routes/_authenticated.facilities'
+import { Route as AuthenticatedEventsRouteImport } from './routes/_authenticated.events'
 import { Route as AuthenticatedCircularsRouteImport } from './routes/_authenticated.circulars'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated.chat'
 import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authenticated.attendance'
@@ -92,6 +93,11 @@ const AuthenticatedFacilitiesRoute = AuthenticatedFacilitiesRouteImport.update({
   path: '/facilities',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedEventsRoute = AuthenticatedEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedCircularsRoute = AuthenticatedCircularsRouteImport.update({
   id: '/circulars',
   path: '/circulars',
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/attendance': typeof AuthenticatedAttendanceRoute
   '/chat': typeof AuthenticatedChatRoute
   '/circulars': typeof AuthenticatedCircularsRoute
+  '/events': typeof AuthenticatedEventsRoute
   '/facilities': typeof AuthenticatedFacilitiesRoute
   '/leaves': typeof AuthenticatedLeavesRoute
   '/lesson-planner': typeof AuthenticatedLessonPlannerRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/attendance': typeof AuthenticatedAttendanceRoute
   '/chat': typeof AuthenticatedChatRoute
   '/circulars': typeof AuthenticatedCircularsRoute
+  '/events': typeof AuthenticatedEventsRoute
   '/facilities': typeof AuthenticatedFacilitiesRoute
   '/leaves': typeof AuthenticatedLeavesRoute
   '/lesson-planner': typeof AuthenticatedLessonPlannerRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/_authenticated/attendance': typeof AuthenticatedAttendanceRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/circulars': typeof AuthenticatedCircularsRoute
+  '/_authenticated/events': typeof AuthenticatedEventsRoute
   '/_authenticated/facilities': typeof AuthenticatedFacilitiesRoute
   '/_authenticated/leaves': typeof AuthenticatedLeavesRoute
   '/_authenticated/lesson-planner': typeof AuthenticatedLessonPlannerRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/attendance'
     | '/chat'
     | '/circulars'
+    | '/events'
     | '/facilities'
     | '/leaves'
     | '/lesson-planner'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
     | '/attendance'
     | '/chat'
     | '/circulars'
+    | '/events'
     | '/facilities'
     | '/leaves'
     | '/lesson-planner'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/_authenticated/attendance'
     | '/_authenticated/chat'
     | '/_authenticated/circulars'
+    | '/_authenticated/events'
     | '/_authenticated/facilities'
     | '/_authenticated/leaves'
     | '/_authenticated/lesson-planner'
@@ -325,6 +337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFacilitiesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/events': {
+      id: '/_authenticated/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof AuthenticatedEventsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/circulars': {
       id: '/_authenticated/circulars'
       path: '/circulars'
@@ -373,6 +392,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAttendanceRoute: typeof AuthenticatedAttendanceRoute
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedCircularsRoute: typeof AuthenticatedCircularsRoute
+  AuthenticatedEventsRoute: typeof AuthenticatedEventsRoute
   AuthenticatedFacilitiesRoute: typeof AuthenticatedFacilitiesRoute
   AuthenticatedLeavesRoute: typeof AuthenticatedLeavesRoute
   AuthenticatedLessonPlannerRoute: typeof AuthenticatedLessonPlannerRoute
@@ -390,6 +410,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAttendanceRoute: AuthenticatedAttendanceRoute,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedCircularsRoute: AuthenticatedCircularsRoute,
+  AuthenticatedEventsRoute: AuthenticatedEventsRoute,
   AuthenticatedFacilitiesRoute: AuthenticatedFacilitiesRoute,
   AuthenticatedLeavesRoute: AuthenticatedLeavesRoute,
   AuthenticatedLessonPlannerRoute: AuthenticatedLessonPlannerRoute,
