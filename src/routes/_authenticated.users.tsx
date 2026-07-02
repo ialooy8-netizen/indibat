@@ -11,7 +11,10 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { UserCog, Trash2, KeyRound, Eye, Mail, Phone as PhoneIcon, Calendar } from "lucide-react";
 import { toast } from "sonner";
-import { adminDeleteUser, adminResetPassword, adminGetAuthUsers } from "@/lib/admin.functions";
+import { adminDeleteUser, adminResetPassword, adminGetAuthUsers, adminCreateUser } from "@/lib/admin.functions";
+import { uploadAttachment, getAttachmentUrl } from "@/lib/storage";
+import { Select as RoleSelect, SelectContent as RSC, SelectItem as RSI, SelectTrigger as RST, SelectValue as RSV } from "@/components/ui/select";
+import { UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/users")({
   component: UsersPage,
@@ -91,9 +94,12 @@ function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold flex items-center gap-2"><UserCog className="h-7 w-7 text-primary" /> حسابات المستخدمين</h2>
-        <p className="text-sm text-muted-foreground mt-1">عيّن دوراً، اعرض التفاصيل، أو احذف الحساب نهائياً.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-3xl font-bold flex items-center gap-2"><UserCog className="h-7 w-7 text-primary" /> حسابات المستخدمين</h2>
+          <p className="text-sm text-muted-foreground mt-1">عيّن دوراً، اعرض التفاصيل، أو احذف الحساب نهائياً.</p>
+        </div>
+        <CreateUserDialog onCreated={() => { qc.invalidateQueries({ queryKey: ["all-profiles"] }); qc.invalidateQueries({ queryKey: ["all-user-roles"] }); qc.invalidateQueries({ queryKey: ["auth-users"] }); }} />
       </div>
 
       <div className="space-y-2">
