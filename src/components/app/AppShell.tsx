@@ -6,12 +6,13 @@ import { useRoles, type AppRole, ROLE_LABELS, setDemoRole } from "@/hooks/useRol
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Users, GraduationCap, ClipboardCheck, Calendar, Building2,
-  Printer, FileText, BarChart3, Settings, UserCog, LogOut, Menu, Brain, Megaphone, X, Sparkles, Eye, MessageSquare,
+  Printer, FileText, BarChart3, Settings, UserCog, LogOut, Menu, Brain, Megaphone, X, Sparkles, Eye, MessageSquare, CalendarCheck2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useRealtimeBadges } from "@/hooks/useRealtimeBadges";
 import { useBranding } from "@/hooks/useBranding";
+import { useAppName } from "@/hooks/useAppName";
 import { LiveClock } from "@/components/app/LiveClock";
 import { AboutDialog } from "@/components/app/AboutDialog";
 import { StaffNoticesBanner } from "@/components/app/StaffNoticesBanner";
@@ -27,6 +28,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: "/facilities", label: "حجوزات المرافق", icon: Building2 },
   { to: "/leaves", label: "الإجازات", icon: FileText, badge: "leaves" },
   { to: "/print", label: "المطبوعات", icon: Printer, badge: "prints" },
+  { to: "/events", label: "توثيق الفعاليات", icon: CalendarCheck2 },
   { to: "/predictor", label: "المتنبئ السلوكي", icon: Brain },
   { to: "/circulars", label: "التعاميم", icon: Megaphone },
   { to: "/chat", label: "غرفة الموظفين", icon: MessageSquare },
@@ -51,6 +53,7 @@ const NAV_BY_ROLE: Record<AppRole, NavItem[]> = {
     { to: "/facilities", label: "حجز المرافق", icon: Building2 },
     { to: "/print", label: "طلب طباعة", icon: Printer },
     { to: "/leaves", label: "طلب إجازة", icon: FileText },
+    { to: "/events", label: "توثيق فعالية", icon: CalendarCheck2 },
     { to: "/circulars", label: "التعاميم", icon: Megaphone },
     { to: "/chat", label: "غرفة الموظفين", icon: MessageSquare },
   ],
@@ -87,6 +90,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const { logoUrl } = useBranding();
+  const app = useAppName();
 
   const role: AppRole | null = roles[0] ?? null;
   const navItems = role ? NAV_BY_ROLE[role] : [];
@@ -124,8 +128,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const SidebarContent = (
     <div className="flex flex-col h-full">
       <div className="p-5 border-b border-border/50 text-center">
-        <img src={logoUrl} alt="EduPulse | نبض" className="mx-auto h-16 object-contain mb-2" />
-        <h1 className="text-xl font-extrabold text-gradient leading-tight">EduPulse | نبض</h1>
+        <img src={logoUrl} alt={app.name} className="mx-auto h-16 object-contain mb-2" />
+        <h1 className="text-xl font-extrabold text-gradient leading-tight">{app.name}</h1>
         <div className="mt-2 flex justify-center"><LiveClock /></div>
       </div>
       {isReallyMaster && demoRole && (
@@ -196,7 +200,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button onClick={() => setOpen(true)} className="p-2"><Menu className="h-5 w-5" /></button>
           <div className="flex items-center gap-2">
             <img src={logoUrl} alt="" className="h-8 object-contain" />
-            <h1 className="text-base font-bold text-gradient">EduPulse | نبض</h1>
+            <h1 className="text-base font-bold text-gradient">{app.name}</h1>
           </div>
           <LiveClock compact />
         </header>
