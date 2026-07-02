@@ -212,3 +212,57 @@ function ResetPasswordDialog({ userId, email }: { userId: string; email: string 
     </Dialog>
   );
 }
+
+function CreateUserDialog({ onCreated }: { onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ email: "", password: "", fullName: "", phone: "", role: "" as "" | AppRole });
+  const fn = useServerFn(adminCreateUser);
+  const m = useMutation({
+    mutationFn: async () => {
+      await fn({ data: {
+        email: form.email, password: form.password, fullName: form.fullName,
+        phone: form.phone || undefined,
+        role: (form.role || undefined) as "principal" | "vice_principal" | "teacher" | "print_manager" | undefined,
+      } });
+    },
+    onSuccess: () => {
+      toast.success("تم إنشاء الحساب");
+      setOpen(false);
+      setForm({ email: "", password: "", fullName: "", phone: "", role: "" });
+      onCreated();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2 gradient-primary text-primary-foreground"><UserPlus className="h-4 w-4" /> إنشاء حساب جديد</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>إنشاء حساب مستخدم</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div><Label>الاسم الكامل</Label><Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} /></div>
+          <div><Label>البريد الإلكتروني</Label><Input dir="ltr" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+          <div><Label>كلمة المرور المؤقتة</Label><Input dir="ltr" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8 أحرف على الأقل" /></div>
+          <div><Label>الجوال (اختياري)</Label><Input dir="ltr" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+973XXXXXXXX" /></div>
+          <div><Label>الدور</Label>
+            <RoleSelect value={form.role} onValueChange={(v) => setForm({ ...form, role: v as AppRole })}>
+              <RST><RSV placeholder="اختر دوراً (اختياري)" /></RST>
+              <RSC>
+                {(["principal","vice_principal","teacher","print_manager"] as AppRole[]).map((r) => (
+                  <RSI key={r} value={r}>{ROLE_LABELS[r]}</RSI>
+                ))}
+              </RSC>
+            </RoleSelect>
+          </div>
+          <Button onClick={() => m.mutate()} disabled={!form.email || form.password.length < 8 || !form.fullName || m.isPending} className="w-full gradient-primary text-primary-foreground">
+            {m.isPending ? "..." : "إنشاء الحساب"}
+          </Button>
+          <p className="text-xs text-muted-foreground">سيتم تأكيد البريد تلقائياً. انسخ كلمة المرور وسلّمها للمستخدم بأمان.</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function _unused() { getAttachmentUrl; uploadAttachment; }
