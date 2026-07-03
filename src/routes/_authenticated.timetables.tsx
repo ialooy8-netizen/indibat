@@ -52,8 +52,8 @@ function TimetablesPage() {
         supabase.from("classes").select("id, name"),
       ]);
       if (tts.error) throw tts.error;
-      const cmap = new Map((cls.data ?? []).map((c) => [c.id, c.name] as const));
-      return (tts.data ?? []).map((t) => ({ ...t, class_name: cmap.get(t.ref_id) ?? "—" }));
+      const cmap = new Map((cls.data ?? []).map((c) => [c.id, c.name as string] as const));
+      return (tts.data ?? []).map((t) => ({ ...t, class_name: cmap.get(t.ref_id ?? "") ?? "—" }));
     },
   });
 
