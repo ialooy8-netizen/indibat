@@ -50,9 +50,9 @@ function FacilitiesPage() {
   const resources: string[] = config.data?.resources ?? [];
   const periods = config.data?.periods_per_day ?? 7;
 
-  // Build grid map: resource -> period -> booking
+  type Booking = NonNullable<typeof bookings.data>[number];
   const gridMap = useMemo(() => {
-    const m = new Map<string, Map<string, typeof bookings.data extends Array<infer T> ? T : never>>();
+    const m = new Map<string, Map<string, Booking>>();
     for (const b of bookings.data ?? []) {
       if (b.booking_date !== gridDate) continue;
       if (!m.has(b.resource)) m.set(b.resource, new Map());
