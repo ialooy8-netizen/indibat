@@ -89,17 +89,61 @@ function ReportsPage() {
     },
   });
 
+  const [classFilter, setClassFilter] = useState<string>("");
+  const classesList = useQuery({
+    queryKey: ["reports-classes"],
+    queryFn: async () => {
+      const { data } = await supabase.from("classes").select("id,name").order("name");
+      return data ?? [];
+    },
+  });
+
+  const filteredAbsences = useMemo(() => (absences.data ?? []).filter((r) => {
+    if (!classFilter) return true;
+    return (r.students as { classes: { name: string } | null } | null)?.classes?.name === classFilter;
+  }), [absences.data, classFilter]);
+  const filteredIncidents = useMemo(() => (incidents.data ?? []).filter((r) => {
+    if (!classFilter) return true;
+    return (r.students as { classes: { name: string } | null } | null)?.classes?.name === classFilter;
+  }), [incidents.data, classFilter]);
+
+  const printAbsences = () => {
+    const rows = filteredAbsences.map((r) => `<tr><td>${r.date}</td><td>${(r.students as { name: string } | null)?.name ?? ""}</td><td>${((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? ""}</td></tr>`).join("");
+    brandedPrint("تقرير الغياب", branding.logoUrl, `الفترة: ${from} إلى ${to}${classFilter ? ` — الصف: ${classFilter}` : ""} • عدد السجلات: ${filteredAbsences.length}`,
+      `<table><thead><tr><th>التاريخ</th><th>الطالب</th><th>الصف</th></tr></thead><tbody>${rows}</tbody></table>`);
+  };
+  const printIncidents = () => {
+    const rows = filteredIncidents.map((r) => `<tr><td>${new Date(r.created_at).toLocaleDateString("ar")}</td><td>${(r.students as { name: string } | null)?.name ?? ""}</td><td>${r.type === "reward" ? "مكافأة" : "مخالفة"}</td><td>${r.type === "reward" ? "+" : "-"}${r.points}</td><td>${r.note ?? ""}</td></tr>`).join("");
+    brandedPrint("تقرير السلوك", branding.logoUrl, `الفترة: ${from} إلى ${to}${classFilter ? ` — الصف: ${classFilter}` : ""} • عدد السجلات: ${filteredIncidents.length}`,
+      `<table><thead><tr><th>التاريخ</th><th>الطالب</th><th>النوع</th><th>النقاط</th><th>الملاحظة</th></tr></thead><tbody>${rows}</tbody></table>`);
+  };
+  const printClasses = () => {
+    const rows = (classSummary.data ?? []).map((c) => { const avg = c.count > 0 ? Math.round(c.sum / c.count) : 0; return `<tr><td>${c.name}</td><td>${c.count}</td><td>${avg}</td><td>${c.risk}</td></tr>`; }).join("");
+    brandedPrint("تقرير الصفوف", branding.logoUrl, `عدد الصفوف: ${classSummary.data?.length ?? 0}`,
+      `<table><thead><tr><th>الصف</th><th>عدد الطلاب</th><th>متوسط السلوك</th><th>تحت خط الإنذار</th></tr></thead><tbody>${rows}</tbody></table>`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-3xl font-bold flex items-center gap-2"><BarChart3 className="h-7 w-7 text-primary" /> التقارير</h2>
-        <Button onClick={() => window.print()} variant="outline" className="gap-2"><Printer className="h-4 w-4" /> طباعة</Button>
       </div>
 
       <div className="glass rounded-2xl p-4 flex flex-wrap gap-3 items-end">
         <div><Label>من</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div><Label>إلى</Label><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+        <div className="min-w-[180px]">
+          <Label>الصف</Label>
+          <Select value={classFilter || "all"} onValueChange={(v) => setClassFilter(v === "all" ? "" : v)}>
+            <SelectTrigger><SelectValue placeholder="كل الصفوف" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الصفوف</SelectItem>
+              {(classesList.data ?? []).map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
 
       <Tabs defaultValue="absences">
         <TabsList className="grid grid-cols-3 w-full max-w-xl">
