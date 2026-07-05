@@ -4,9 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoles } from "@/hooks/useRoles";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowRight, Star, AlertTriangle, TrendingUp, MessageSquare, Trash2, CalendarDays, Phone } from "lucide-react";
+import { ArrowRight, Star, AlertTriangle, TrendingUp, MessageSquare, Trash2, CalendarDays, Phone, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { StudentQRBadge } from "@/components/app/StudentQRBadge";
 
 export const Route = createFileRoute("/_authenticated/students/$id")({
   component: StudentProfile,
@@ -131,7 +132,14 @@ function StudentProfile() {
           <TabsTrigger value="behavior">السجل السلوكي ({incidents.data?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="attendance">الحضور ({stats.total})</TabsTrigger>
           <TabsTrigger value="comms">رسائل ولي الأمر ({comms.data?.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="qr"><QrCode className="h-4 w-4 ml-1" /> بطاقة QR</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="qr" className="mt-4">
+          <div className="max-w-sm mx-auto">
+            <StudentQRBadge studentId={s.id} studentName={s.name} className={(s.classes as { name: string } | null)?.name} />
+          </div>
+        </TabsContent>
 
         <TabsContent value="behavior" className="space-y-2 mt-4">
           {incidents.data?.map((i) => (
