@@ -8,7 +8,8 @@ import { NotificationsFeed } from "@/components/app/NotificationsFeed";
 import { TeacherTodaySchedule } from "@/components/app/TeacherTodaySchedule";
 import { MissingAttendanceCard } from "@/components/app/MissingAttendanceCard";
 import { FeatureHelp } from "@/components/app/FeatureHelp";
-import { Users, GraduationCap, AlertTriangle, TrendingUp, Megaphone, ClipboardCheck, FileText, Printer, Sparkles, Calendar as CalendarIcon, MessageSquare } from "lucide-react";
+import { WeeklyDigestCard } from "@/components/app/WeeklyDigestCard";
+import { Users, GraduationCap, AlertTriangle, TrendingUp, Megaphone, ClipboardCheck, FileText, Printer, Sparkles, Calendar as CalendarIcon, MessageSquare, QrCode } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
   RadialBarChart, RadialBar, PolarAngleAxis,
@@ -230,6 +231,9 @@ function Dashboard() {
             <MissingAttendanceCard />
             <NotificationsFeed />
           </div>
+
+          {/* AI Weekly Digest */}
+          <WeeklyDigestCard />
         </>
       )}
 
@@ -249,6 +253,7 @@ function Dashboard() {
       {/* Quick actions per role */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {isTeacher && <QuickAction to="/attendance" icon={ClipboardCheck} label="تسجيل الحضور" tone="primary" />}
+        {isTeacher && <QuickAction to="/scan" icon={QrCode} label="حضور بـ QR" tone="accent" />}
         {isTeacher && <QuickAction to="/lesson-planner" icon={Sparkles} label="مخطط دروس AI" tone="accent" />}
         {(isTeacher || isAdmin) && <QuickAction to="/leaves" icon={FileText} label="طلب إجازة" tone="warning" />}
         {(isTeacher || isAdmin) && <QuickAction to="/print" icon={Printer} label="طلب طباعة" tone="primary" />}
