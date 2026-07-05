@@ -16,6 +16,7 @@ import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedTimetablesRouteImport } from './routes/_authenticated.timetables'
 import { Route as AuthenticatedStudentsRouteImport } from './routes/_authenticated.students'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
+import { Route as AuthenticatedScanRouteImport } from './routes/_authenticated.scan'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated.reports'
 import { Route as AuthenticatedPrintRouteImport } from './routes/_authenticated.print'
 import { Route as AuthenticatedPredictorRouteImport } from './routes/_authenticated.predictor'
@@ -60,6 +61,11 @@ const AuthenticatedStudentsRoute = AuthenticatedStudentsRouteImport.update({
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedScanRoute = AuthenticatedScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/predictor': typeof AuthenticatedPredictorRoute
   '/print': typeof AuthenticatedPrintRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/students': typeof AuthenticatedStudentsRouteWithChildren
   '/timetables': typeof AuthenticatedTimetablesRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/predictor': typeof AuthenticatedPredictorRoute
   '/print': typeof AuthenticatedPrintRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/students': typeof AuthenticatedStudentsRouteWithChildren
   '/timetables': typeof AuthenticatedTimetablesRoute
@@ -171,6 +179,7 @@ export interface FileRoutesById {
   '/_authenticated/predictor': typeof AuthenticatedPredictorRoute
   '/_authenticated/print': typeof AuthenticatedPrintRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/scan': typeof AuthenticatedScanRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/students': typeof AuthenticatedStudentsRouteWithChildren
   '/_authenticated/timetables': typeof AuthenticatedTimetablesRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/predictor'
     | '/print'
     | '/reports'
+    | '/scan'
     | '/settings'
     | '/students'
     | '/timetables'
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/predictor'
     | '/print'
     | '/reports'
+    | '/scan'
     | '/settings'
     | '/students'
     | '/timetables'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/_authenticated/predictor'
     | '/_authenticated/print'
     | '/_authenticated/reports'
+    | '/_authenticated/scan'
     | '/_authenticated/settings'
     | '/_authenticated/students'
     | '/_authenticated/timetables'
@@ -293,6 +305,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/scan': {
+      id: '/_authenticated/scan'
+      path: '/scan'
+      fullPath: '/scan'
+      preLoaderRoute: typeof AuthenticatedScanRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/reports': {
@@ -399,6 +418,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPredictorRoute: typeof AuthenticatedPredictorRoute
   AuthenticatedPrintRoute: typeof AuthenticatedPrintRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedScanRoute: typeof AuthenticatedScanRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStudentsRoute: typeof AuthenticatedStudentsRouteWithChildren
   AuthenticatedTimetablesRoute: typeof AuthenticatedTimetablesRoute
@@ -417,6 +437,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPredictorRoute: AuthenticatedPredictorRoute,
   AuthenticatedPrintRoute: AuthenticatedPrintRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedScanRoute: AuthenticatedScanRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStudentsRoute: AuthenticatedStudentsRouteWithChildren,
   AuthenticatedTimetablesRoute: AuthenticatedTimetablesRoute,
