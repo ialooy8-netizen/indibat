@@ -182,28 +182,21 @@ function ReportsPage() {
 
 
         <TabsContent value="incidents" className="space-y-3 mt-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">السجل السلوكي ({incidents.data?.length ?? 0})</h3>
-            <Button size="sm" variant="outline" onClick={() => downloadCSV(`incidents-${from}-${to}.csv`, [
-              ["التاريخ", "الطالب", "الصف", "النوع", "النقاط", "الشدة", "ملاحظة"],
-              ...(incidents.data ?? []).map((r) => [
-                new Date(r.created_at).toLocaleDateString("ar"),
-                (r.students as { name: string } | null)?.name ?? "",
-                ((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? "",
-                r.type === "reward" ? "مكافأة" : "مخالفة",
-                r.points,
-                r.severity ?? "",
-                r.note ?? "",
-              ]),
-            ])} className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="text-lg font-semibold">السجل السلوكي ({filteredIncidents.length})</h3>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={printIncidents} className="gap-2"><Printer className="h-4 w-4" /> طباعة PDF</Button>
+              <Button size="sm" variant="outline" onClick={() => downloadCSV(`incidents-${from}-${to}.csv`, [
+                ["التاريخ", "الطالب", "الصف", "النوع", "النقاط", "الشدة", "ملاحظة"],
+                ...filteredIncidents.map((r) => [new Date(r.created_at).toLocaleDateString("ar"), (r.students as { name: string } | null)?.name ?? "", ((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? "", r.type === "reward" ? "مكافأة" : "مخالفة", r.points, r.severity ?? "", r.note ?? ""]),
+              ])} className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
+            </div>
           </div>
           <div className="glass rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-white/5">
-                <tr><th className="p-3 text-right">التاريخ</th><th className="p-3 text-right">الطالب</th><th className="p-3 text-right">النوع</th><th className="p-3 text-right">النقاط</th><th className="p-3 text-right">ملاحظة</th></tr>
-              </thead>
+              <thead className="bg-white/5"><tr><th className="p-3 text-right">التاريخ</th><th className="p-3 text-right">الطالب</th><th className="p-3 text-right">النوع</th><th className="p-3 text-right">النقاط</th><th className="p-3 text-right">ملاحظة</th></tr></thead>
               <tbody>
-                {incidents.data?.map((r, i) => (
+                {filteredIncidents.map((r, i) => (
                   <tr key={i} className="border-t border-border/30">
                     <td className="p-3 whitespace-nowrap">{new Date(r.created_at).toLocaleDateString("ar")}</td>
                     <td className="p-3">{(r.students as { name: string } | null)?.name ?? "—"}</td>
@@ -212,14 +205,17 @@ function ReportsPage() {
                     <td className="p-3 text-muted-foreground text-xs">{r.note ?? "—"}</td>
                   </tr>
                 ))}
-                {incidents.data?.length === 0 && <tr><td colSpan={5} className="p-10 text-center text-muted-foreground">لا يوجد سجل</td></tr>}
+                {filteredIncidents.length === 0 && <tr><td colSpan={5} className="p-10 text-center text-muted-foreground">لا يوجد سجل</td></tr>}
               </tbody>
             </table>
           </div>
         </TabsContent>
 
         <TabsContent value="classes" className="space-y-3 mt-4">
-          <h3 className="text-lg font-semibold">متوسط سلوك كل صف</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">متوسط سلوك كل صف</h3>
+            <Button size="sm" variant="outline" onClick={printClasses} className="gap-2"><Printer className="h-4 w-4" /> طباعة PDF</Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {classSummary.data?.map((c) => {
               const avg = c.count > 0 ? Math.round(c.sum / c.count) : 0;
@@ -240,6 +236,7 @@ function ReportsPage() {
             {classSummary.data?.length === 0 && <div className="col-span-full glass rounded-2xl p-10 text-center text-muted-foreground">لا توجد صفوف</div>}
           </div>
         </TabsContent>
+
       </Tabs>
     </div>
   );
