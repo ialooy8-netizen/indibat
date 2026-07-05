@@ -1,16 +1,44 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBranding } from "@/hooks/useBranding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { BarChart3, Printer, Download } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { BarChart3, Printer, Download, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   component: ReportsPage,
 });
+
+function downloadCSV(filename: string, rows: (string | number | null | undefined)[][]) {
+  const csv = "\uFEFF" + rows.map((r) => r.map((c) => {
+    const v = String(c ?? "");
+    return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  }).join(",")).join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function brandedPrint(title: string, headerUrl: string | undefined, subtitle: string, tableHtml: string) {
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${title}</title>
+    <style>@page{size:A4;margin:14mm}body{font-family:'Segoe UI',Tahoma,sans-serif;color:#111;margin:0}
+    header{border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:12px;display:flex;align-items:center;gap:12px}
+    header img{max-height:64px}h1{margin:0;font-size:20px}.sub{color:#555;font-size:13px;margin-bottom:12px}
+    table{width:100%;border-collapse:collapse;font-size:13px}th,td{border:1px solid #ccc;padding:6px 8px;text-align:right}
+    thead{background:#f0f0f0}footer{margin-top:20px;padding-top:8px;border-top:1px solid #ccc;color:#666;font-size:11px;text-align:center}</style>
+    </head><body><header>${headerUrl ? `<img src="${headerUrl}"/>` : ""}<div><h1>${title}</h1><div class="sub">${subtitle}</div></div></header>
+    ${tableHtml}<footer>EduPulse | نبض — تم التوليد بتاريخ ${new Date().toLocaleString("ar")}</footer></body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 400);
+}
 
 function downloadCSV(filename: string, rows: (string | number | null | undefined)[][]) {
   const csv = "\uFEFF" + rows.map((r) => r.map((c) => {
