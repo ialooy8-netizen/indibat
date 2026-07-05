@@ -153,35 +153,33 @@ function ReportsPage() {
         </TabsList>
 
         <TabsContent value="absences" className="space-y-3 mt-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">سجل الغياب ({absences.data?.length ?? 0})</h3>
-            <Button size="sm" variant="outline" onClick={() => downloadCSV(`absences-${from}-${to}.csv`, [
-              ["التاريخ", "الطالب", "الصف"],
-              ...(absences.data ?? []).map((r) => [
-                r.date,
-                (r.students as { name: string } | null)?.name ?? "",
-                ((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? "",
-              ]),
-            ])} className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="text-lg font-semibold">سجل الغياب ({filteredAbsences.length})</h3>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={printAbsences} className="gap-2"><Printer className="h-4 w-4" /> طباعة PDF</Button>
+              <Button size="sm" variant="outline" onClick={() => downloadCSV(`absences-${from}-${to}.csv`, [
+                ["التاريخ", "الطالب", "الصف"],
+                ...filteredAbsences.map((r) => [r.date, (r.students as { name: string } | null)?.name ?? "", ((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? ""]),
+              ])} className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
+            </div>
           </div>
           <div className="glass rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-white/5">
-                <tr><th className="p-3 text-right">التاريخ</th><th className="p-3 text-right">الطالب</th><th className="p-3 text-right">الصف</th></tr>
-              </thead>
+              <thead className="bg-white/5"><tr><th className="p-3 text-right">التاريخ</th><th className="p-3 text-right">الطالب</th><th className="p-3 text-right">الصف</th></tr></thead>
               <tbody>
-                {absences.data?.map((r, i) => (
+                {filteredAbsences.map((r, i) => (
                   <tr key={i} className="border-t border-border/30">
                     <td className="p-3">{r.date}</td>
                     <td className="p-3">{(r.students as { name: string } | null)?.name ?? "—"}</td>
                     <td className="p-3 text-muted-foreground">{((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? "—"}</td>
                   </tr>
                 ))}
-                {absences.data?.length === 0 && <tr><td colSpan={3} className="p-10 text-center text-muted-foreground">لا يوجد غياب</td></tr>}
+                {filteredAbsences.length === 0 && <tr><td colSpan={3} className="p-10 text-center text-muted-foreground">لا يوجد غياب</td></tr>}
               </tbody>
             </table>
           </div>
         </TabsContent>
+
 
         <TabsContent value="incidents" className="space-y-3 mt-4">
           <div className="flex items-center justify-between">
