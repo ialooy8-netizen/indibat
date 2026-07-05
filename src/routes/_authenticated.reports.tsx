@@ -40,18 +40,8 @@ function brandedPrint(title: string, headerUrl: string | undefined, subtitle: st
   setTimeout(() => w.print(), 400);
 }
 
-function downloadCSV(filename: string, rows: (string | number | null | undefined)[][]) {
-  const csv = "\uFEFF" + rows.map((r) => r.map((c) => {
-    const v = String(c ?? "");
-    return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
-  }).join(",")).join("\n");
-  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
-
 function ReportsPage() {
+  const { branding } = useBranding();
   const today = new Date().toISOString().slice(0, 10);
   const monthStart = new Date(); monthStart.setDate(1);
   const [from, setFrom] = useState(monthStart.toISOString().slice(0, 10));
