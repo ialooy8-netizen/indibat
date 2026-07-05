@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useBranding } from "@/hooks/useBranding";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { BarChart3, Printer, Download } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { BarChart3, Printer, Download, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   component: ReportsPage,
@@ -23,7 +25,24 @@ function downloadCSV(filename: string, rows: (string | number | null | undefined
   URL.revokeObjectURL(url);
 }
 
+function brandedPrint(title: string, headerUrl: string | undefined, subtitle: string, tableHtml: string) {
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${title}</title>
+    <style>@page{size:A4;margin:14mm}body{font-family:'Segoe UI',Tahoma,sans-serif;color:#111;margin:0}
+    header{border-bottom:2px solid #333;padding-bottom:8px;margin-bottom:12px;display:flex;align-items:center;gap:12px}
+    header img{max-height:64px}h1{margin:0;font-size:20px}.sub{color:#555;font-size:13px;margin-bottom:12px}
+    table{width:100%;border-collapse:collapse;font-size:13px}th,td{border:1px solid #ccc;padding:6px 8px;text-align:right}
+    thead{background:#f0f0f0}footer{margin-top:20px;padding-top:8px;border-top:1px solid #ccc;color:#666;font-size:11px;text-align:center}</style>
+    </head><body><header>${headerUrl ? `<img src="${headerUrl}"/>` : ""}<div><h1>${title}</h1><div class="sub">${subtitle}</div></div></header>
+    ${tableHtml}<footer>EduPulse | نبض — تم التوليد بتاريخ ${new Date().toLocaleString("ar")}</footer></body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 400);
+}
+
+
 function ReportsPage() {
+  const branding = useBranding();
   const today = new Date().toISOString().slice(0, 10);
   const monthStart = new Date(); monthStart.setDate(1);
   const [from, setFrom] = useState(monthStart.toISOString().slice(0, 10));
@@ -70,17 +89,61 @@ function ReportsPage() {
     },
   });
 
+  const [classFilter, setClassFilter] = useState<string>("");
+  const classesList = useQuery({
+    queryKey: ["reports-classes"],
+    queryFn: async () => {
+      const { data } = await supabase.from("classes").select("id,name").order("name");
+      return data ?? [];
+    },
+  });
+
+  const filteredAbsences = useMemo(() => (absences.data ?? []).filter((r) => {
+    if (!classFilter) return true;
+    return (r.students as { classes: { name: string } | null } | null)?.classes?.name === classFilter;
+  }), [absences.data, classFilter]);
+  const filteredIncidents = useMemo(() => (incidents.data ?? []).filter((r) => {
+    if (!classFilter) return true;
+    return (r.students as { classes: { name: string } | null } | null)?.classes?.name === classFilter;
+  }), [incidents.data, classFilter]);
+
+  const printAbsences = () => {
+    const rows = filteredAbsences.map((r) => `<tr><td>${r.date}</td><td>${(r.students as { name: string } | null)?.name ?? ""}</td><td>${((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? ""}</td></tr>`).join("");
+    brandedPrint("تقرير الغياب", branding.logoUrl, `الفترة: ${from} إلى ${to}${classFilter ? ` — الصف: ${classFilter}` : ""} • عدد السجلات: ${filteredAbsences.length}`,
+      `<table><thead><tr><th>التاريخ</th><th>الطالب</th><th>الصف</th></tr></thead><tbody>${rows}</tbody></table>`);
+  };
+  const printIncidents = () => {
+    const rows = filteredIncidents.map((r) => `<tr><td>${new Date(r.created_at).toLocaleDateString("ar")}</td><td>${(r.students as { name: string } | null)?.name ?? ""}</td><td>${r.type === "reward" ? "مكافأة" : "مخالفة"}</td><td>${r.type === "reward" ? "+" : "-"}${r.points}</td><td>${r.note ?? ""}</td></tr>`).join("");
+    brandedPrint("تقرير السلوك", branding.logoUrl, `الفترة: ${from} إلى ${to}${classFilter ? ` — الصف: ${classFilter}` : ""} • عدد السجلات: ${filteredIncidents.length}`,
+      `<table><thead><tr><th>التاريخ</th><th>الطالب</th><th>النوع</th><th>النقاط</th><th>الملاحظة</th></tr></thead><tbody>${rows}</tbody></table>`);
+  };
+  const printClasses = () => {
+    const rows = (classSummary.data ?? []).map((c) => { const avg = c.count > 0 ? Math.round(c.sum / c.count) : 0; return `<tr><td>${c.name}</td><td>${c.count}</td><td>${avg}</td><td>${c.risk}</td></tr>`; }).join("");
+    brandedPrint("تقرير الصفوف", branding.logoUrl, `عدد الصفوف: ${classSummary.data?.length ?? 0}`,
+      `<table><thead><tr><th>الصف</th><th>عدد الطلاب</th><th>متوسط السلوك</th><th>تحت خط الإنذار</th></tr></thead><tbody>${rows}</tbody></table>`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-3xl font-bold flex items-center gap-2"><BarChart3 className="h-7 w-7 text-primary" /> التقارير</h2>
-        <Button onClick={() => window.print()} variant="outline" className="gap-2"><Printer className="h-4 w-4" /> طباعة</Button>
       </div>
 
       <div className="glass rounded-2xl p-4 flex flex-wrap gap-3 items-end">
         <div><Label>من</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
         <div><Label>إلى</Label><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+        <div className="min-w-[180px]">
+          <Label>الصف</Label>
+          <Select value={classFilter || "all"} onValueChange={(v) => setClassFilter(v === "all" ? "" : v)}>
+            <SelectTrigger><SelectValue placeholder="كل الصفوف" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الصفوف</SelectItem>
+              {(classesList.data ?? []).map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
 
       <Tabs defaultValue="absences">
         <TabsList className="grid grid-cols-3 w-full max-w-xl">
@@ -90,59 +153,50 @@ function ReportsPage() {
         </TabsList>
 
         <TabsContent value="absences" className="space-y-3 mt-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">سجل الغياب ({absences.data?.length ?? 0})</h3>
-            <Button size="sm" variant="outline" onClick={() => downloadCSV(`absences-${from}-${to}.csv`, [
-              ["التاريخ", "الطالب", "الصف"],
-              ...(absences.data ?? []).map((r) => [
-                r.date,
-                (r.students as { name: string } | null)?.name ?? "",
-                ((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? "",
-              ]),
-            ])} className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="text-lg font-semibold">سجل الغياب ({filteredAbsences.length})</h3>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={printAbsences} className="gap-2"><Printer className="h-4 w-4" /> طباعة PDF</Button>
+              <Button size="sm" variant="outline" onClick={() => downloadCSV(`absences-${from}-${to}.csv`, [
+                ["التاريخ", "الطالب", "الصف"],
+                ...filteredAbsences.map((r) => [r.date, (r.students as { name: string } | null)?.name ?? "", ((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? ""]),
+              ])} className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
+            </div>
           </div>
           <div className="glass rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-white/5">
-                <tr><th className="p-3 text-right">التاريخ</th><th className="p-3 text-right">الطالب</th><th className="p-3 text-right">الصف</th></tr>
-              </thead>
+              <thead className="bg-white/5"><tr><th className="p-3 text-right">التاريخ</th><th className="p-3 text-right">الطالب</th><th className="p-3 text-right">الصف</th></tr></thead>
               <tbody>
-                {absences.data?.map((r, i) => (
+                {filteredAbsences.map((r, i) => (
                   <tr key={i} className="border-t border-border/30">
                     <td className="p-3">{r.date}</td>
                     <td className="p-3">{(r.students as { name: string } | null)?.name ?? "—"}</td>
                     <td className="p-3 text-muted-foreground">{((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? "—"}</td>
                   </tr>
                 ))}
-                {absences.data?.length === 0 && <tr><td colSpan={3} className="p-10 text-center text-muted-foreground">لا يوجد غياب</td></tr>}
+                {filteredAbsences.length === 0 && <tr><td colSpan={3} className="p-10 text-center text-muted-foreground">لا يوجد غياب</td></tr>}
               </tbody>
             </table>
           </div>
         </TabsContent>
 
+
         <TabsContent value="incidents" className="space-y-3 mt-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">السجل السلوكي ({incidents.data?.length ?? 0})</h3>
-            <Button size="sm" variant="outline" onClick={() => downloadCSV(`incidents-${from}-${to}.csv`, [
-              ["التاريخ", "الطالب", "الصف", "النوع", "النقاط", "الشدة", "ملاحظة"],
-              ...(incidents.data ?? []).map((r) => [
-                new Date(r.created_at).toLocaleDateString("ar"),
-                (r.students as { name: string } | null)?.name ?? "",
-                ((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? "",
-                r.type === "reward" ? "مكافأة" : "مخالفة",
-                r.points,
-                r.severity ?? "",
-                r.note ?? "",
-              ]),
-            ])} className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="text-lg font-semibold">السجل السلوكي ({filteredIncidents.length})</h3>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={printIncidents} className="gap-2"><Printer className="h-4 w-4" /> طباعة PDF</Button>
+              <Button size="sm" variant="outline" onClick={() => downloadCSV(`incidents-${from}-${to}.csv`, [
+                ["التاريخ", "الطالب", "الصف", "النوع", "النقاط", "الشدة", "ملاحظة"],
+                ...filteredIncidents.map((r) => [new Date(r.created_at).toLocaleDateString("ar"), (r.students as { name: string } | null)?.name ?? "", ((r.students as { classes: { name: string } | null } | null)?.classes)?.name ?? "", r.type === "reward" ? "مكافأة" : "مخالفة", r.points, r.severity ?? "", r.note ?? ""]),
+              ])} className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
+            </div>
           </div>
           <div className="glass rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-white/5">
-                <tr><th className="p-3 text-right">التاريخ</th><th className="p-3 text-right">الطالب</th><th className="p-3 text-right">النوع</th><th className="p-3 text-right">النقاط</th><th className="p-3 text-right">ملاحظة</th></tr>
-              </thead>
+              <thead className="bg-white/5"><tr><th className="p-3 text-right">التاريخ</th><th className="p-3 text-right">الطالب</th><th className="p-3 text-right">النوع</th><th className="p-3 text-right">النقاط</th><th className="p-3 text-right">ملاحظة</th></tr></thead>
               <tbody>
-                {incidents.data?.map((r, i) => (
+                {filteredIncidents.map((r, i) => (
                   <tr key={i} className="border-t border-border/30">
                     <td className="p-3 whitespace-nowrap">{new Date(r.created_at).toLocaleDateString("ar")}</td>
                     <td className="p-3">{(r.students as { name: string } | null)?.name ?? "—"}</td>
@@ -151,14 +205,17 @@ function ReportsPage() {
                     <td className="p-3 text-muted-foreground text-xs">{r.note ?? "—"}</td>
                   </tr>
                 ))}
-                {incidents.data?.length === 0 && <tr><td colSpan={5} className="p-10 text-center text-muted-foreground">لا يوجد سجل</td></tr>}
+                {filteredIncidents.length === 0 && <tr><td colSpan={5} className="p-10 text-center text-muted-foreground">لا يوجد سجل</td></tr>}
               </tbody>
             </table>
           </div>
         </TabsContent>
 
         <TabsContent value="classes" className="space-y-3 mt-4">
-          <h3 className="text-lg font-semibold">متوسط سلوك كل صف</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">متوسط سلوك كل صف</h3>
+            <Button size="sm" variant="outline" onClick={printClasses} className="gap-2"><Printer className="h-4 w-4" /> طباعة PDF</Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {classSummary.data?.map((c) => {
               const avg = c.count > 0 ? Math.round(c.sum / c.count) : 0;
@@ -179,6 +236,7 @@ function ReportsPage() {
             {classSummary.data?.length === 0 && <div className="col-span-full glass rounded-2xl p-10 text-center text-muted-foreground">لا توجد صفوف</div>}
           </div>
         </TabsContent>
+
       </Tabs>
     </div>
   );

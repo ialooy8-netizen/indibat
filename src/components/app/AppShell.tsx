@@ -6,7 +6,7 @@ import { useRoles, type AppRole, ROLE_LABELS, setDemoRole } from "@/hooks/useRol
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Users, GraduationCap, ClipboardCheck, Calendar, Building2,
-  Printer, FileText, BarChart3, Settings, UserCog, LogOut, Menu, Brain, Megaphone, X, Sparkles, Eye, MessageSquare, CalendarCheck2,
+  Printer, FileText, BarChart3, Settings, UserCog, LogOut, Menu, Brain, Megaphone, X, Sparkles, Eye, MessageSquare, CalendarCheck2, QrCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: "/", label: "لوحة التحكم", icon: LayoutDashboard },
   { to: "/students", label: "الطلاب والصفوف", icon: GraduationCap },
   { to: "/attendance", label: "الحضور والتقييم", icon: ClipboardCheck },
+  { to: "/scan", label: "حضور بـ QR", icon: QrCode },
   { to: "/timetables", label: "الجداول", icon: Calendar },
   { to: "/facilities", label: "حجوزات المرافق", icon: Building2 },
   { to: "/leaves", label: "الإجازات", icon: FileText, badge: "leaves" },
@@ -47,6 +48,7 @@ const NAV_BY_ROLE: Record<AppRole, NavItem[]> = {
   teacher: [
     { to: "/", label: "لوحة التحكم", icon: LayoutDashboard },
     { to: "/attendance", label: "الحضور والتقييم", icon: ClipboardCheck },
+    { to: "/scan", label: "حضور بـ QR", icon: QrCode },
     { to: "/students", label: "الطلاب", icon: GraduationCap },
     { to: "/lesson-planner", label: "مخطط الدروس AI", icon: Sparkles },
     { to: "/timetables", label: "جدولي", icon: Calendar },
