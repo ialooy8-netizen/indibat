@@ -54,7 +54,7 @@ export const sendSms = createServerFn({ method: "POST" })
       const body = await res.text();
       if (!res.ok) throw new Error(`GatewayAPI [${res.status}]: ${body}`);
       await logSent(sb, context.userId, "gatewayapi", data.to, data.message);
-      return { ok: true, provider: "gatewayapi", raw: safeJson(body) };
+      return { ok: true, provider: "gatewayapi" as const };
     }
 
     if (useTw) {
@@ -74,7 +74,7 @@ export const sendSms = createServerFn({ method: "POST" })
       const body = await res.text();
       if (!res.ok) throw new Error(`Twilio [${res.status}]: ${body}`);
       await logSent(sb, context.userId, "twilio", data.to, data.message);
-      return { ok: true, provider: "twilio", raw: safeJson(body) };
+      return { ok: true, provider: "twilio" as const };
     }
 
     throw new Error("لا يوجد موفّر SMS متصل. اربط GatewayAPI أو Twilio أولاً.");
@@ -91,6 +91,3 @@ async function logSent(sb: any, userId: string, provider: string, to: string, me
   } catch { /* logging is best-effort */ }
 }
 
-function safeJson(t: string): unknown {
-  try { return JSON.parse(t); } catch { return t; }
-}
