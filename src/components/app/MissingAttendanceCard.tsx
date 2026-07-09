@@ -87,10 +87,13 @@ export function MissingAttendanceCard() {
                     {t.phone && <span className="text-xs text-muted-foreground inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {t.phone}</span>}
                   </div>
                   {t.phone && (
-                    <a href={waLink(t.phone, c.name)} target="_blank" rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-success text-success-foreground hover:opacity-90">
-                      <MessageCircle className="h-3.5 w-3.5" /> تذكير واتساب
-                    </a>
+                    <div className="flex items-center gap-1">
+                      <a href={waLink(t.phone, c.name)} target="_blank" rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-success text-success-foreground hover:opacity-90">
+                        <MessageCircle className="h-3.5 w-3.5" /> واتساب
+                      </a>
+                      <SmsButton phone={t.phone} message={`تذكير: لم يُسجَّل حضور صف "${c.name}" اليوم. الرجاء تسجيله في EduPulse.`} label="SMS" />
+                    </div>
                   )}
                 </div>
               ))}
