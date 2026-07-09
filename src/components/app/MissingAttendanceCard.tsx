@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertTriangle, Phone, MessageCircle, GraduationCap } from "lucide-react";
 import { FeatureHelp } from "./FeatureHelp";
+import { SmsButton } from "./SmsButton";
 
 type ClassRow = { id: string; name: string };
 type CTRow = { class_id: string; teacher_id: string };
