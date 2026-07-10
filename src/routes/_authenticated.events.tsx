@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,20 +11,30 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { CalendarCheck2, Plus, Printer, Check, X, RefreshCcw, Trash2 } from "lucide-react";
+import { CalendarCheck2, Plus, Printer, Check, X, RefreshCcw, Trash2, Paperclip, Upload, Loader2, Image as ImageIcon, FileText, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { submitEvent, reviewEvent } from "@/lib/events.functions";
 import { FeatureHelp } from "@/components/app/FeatureHelp";
+import { uploadAttachment, getAttachmentUrl } from "@/lib/storage";
+import { OneDriveArchiveButton } from "@/components/app/OneDriveArchiveButton";
 
 export const Route = createFileRoute("/_authenticated/events")({
   component: EventsPage,
 });
+
+type Attachment = { url: string; name: string; type?: string };
 
 type EventRow = {
   id: string;
   teacher_id: string;
   event_name: string;
   description: string;
+  event_date: string | null;
+  category: string | null;
+  target_audience: string | null;
+  location: string | null;
+  attachments: Attachment[];
+  onedrive_url: string | null;
   status: "pending" | "approved" | "rejected" | "needs_edits";
   reviewer_id: string | null;
   reviewer_note: string | null;
@@ -39,6 +49,8 @@ const STATUS_LABELS: Record<EventRow["status"], { label: string; chip: string }>
   rejected: { label: "مرفوضة", chip: "bg-destructive/20 text-destructive" },
 };
 
+const CATEGORIES = ["أكاديمية", "رياضية", "ثقافية", "فنية", "اجتماعية", "دينية", "وطنية", "بيئية", "أخرى"];
+
 function EventsPage() {
   const { user } = useAuth();
   const { isAdmin, isTeacher } = useRoles();
@@ -49,7 +61,7 @@ function EventsPage() {
     queryFn: async () => {
       const { data, error } = await supabase.from("event_submissions").select("*").order("submitted_at", { ascending: false });
       if (error) throw error;
-      return data as EventRow[];
+      return (data ?? []).map((r) => ({ ...r, attachments: (r.attachments as unknown as Attachment[]) ?? [] })) as EventRow[];
     },
   });
 
@@ -84,13 +96,15 @@ function EventsPage() {
     onSuccess: () => { toast.success("تم الحذف"); qc.invalidateQueries({ queryKey: ["events"] }); },
   });
 
-  function printApproved(r: EventRow) {
+  async function buildPrintHtml(r: EventRow): Promise<string> {
     const teacher = names.data?.get(r.teacher_id)?.name ?? "—";
     const reviewer = r.reviewer_id ? names.data?.get(r.reviewer_id) : null;
     const signature = reviewer?.signature_url;
-    const w = window.open("", "_blank", "width=900,height=1100");
-    if (!w) return;
-    w.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    const attHtml = r.attachments.length
+      ? `<div class="section-title">المرفقات (${r.attachments.length})</div>
+         <ul class="atts">${r.attachments.map((a) => `<li>${escapeHtml(a.name)}</li>`).join("")}</ul>`
+      : "";
+    return `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
       <title>${r.event_name}</title>
       <style>
         @page { size: A4; margin: 18mm 15mm; }
@@ -100,9 +114,12 @@ function EventsPage() {
         .header img { max-height:80px; object-fit:contain; }
         .header .school { font-size:13pt; color:#333; margin-top:6pt; }
         h1 { font-size:20pt; margin:0 0 6pt; color:#0f172a; }
-        .meta { color:#555; font-size:11pt; margin-bottom:14pt; border-bottom:1px dashed #cbd5e1; padding-bottom:6pt; }
+        .meta { color:#333; font-size:11pt; margin-bottom:14pt; border-bottom:1px dashed #cbd5e1; padding-bottom:6pt; }
+        .meta div { margin:3pt 0; }
+        .grid { display:grid; grid-template-columns:1fr 1fr; gap:4pt 20pt; }
         .section-title { font-size:14pt; color:#2563eb; margin-top:14pt; margin-bottom:6pt; font-weight:bold; }
         .body { font-size:13pt; white-space:pre-wrap; }
+        .atts { font-size:11pt; padding-inline-start:20pt; }
         .approval { margin-top:26pt; padding-top:14pt; border-top:2px solid #16a34a; }
         .sig-line { display:inline-block; min-width:220px; border-bottom:1px solid #333; height:70px; text-align:center; vertical-align:bottom; padding-bottom:4pt; }
         .sig-line img { max-height:60px; }
@@ -114,23 +131,43 @@ function EventsPage() {
       </div>
       <h1>توثيق فعالية مدرسية</h1>
       <div class="meta">
-        <div><strong>اسم الفعالية:</strong> ${r.event_name}</div>
-        <div><strong>مقدّم الطلب:</strong> ${teacher}</div>
-        <div><strong>تاريخ التقديم:</strong> ${new Date(r.submitted_at).toLocaleDateString("ar-BH")}</div>
-        <div><strong>تاريخ الاعتماد:</strong> ${r.reviewed_at ? new Date(r.reviewed_at).toLocaleDateString("ar-BH") : "—"}</div>
+        <div class="grid">
+          <div><strong>اسم الفعالية:</strong> ${escapeHtml(r.event_name)}</div>
+          <div><strong>الفئة:</strong> ${escapeHtml(r.category ?? "—")}</div>
+          <div><strong>تاريخ الفعالية:</strong> ${r.event_date ? new Date(r.event_date).toLocaleDateString("ar-BH") : "—"}</div>
+          <div><strong>المكان:</strong> ${escapeHtml(r.location ?? "—")}</div>
+          <div><strong>الفئة المستهدفة:</strong> ${escapeHtml(r.target_audience ?? "—")}</div>
+          <div><strong>مقدّم الطلب:</strong> ${escapeHtml(teacher)}</div>
+          <div><strong>تاريخ التقديم:</strong> ${new Date(r.submitted_at).toLocaleDateString("ar-BH")}</div>
+          <div><strong>تاريخ الاعتماد:</strong> ${r.reviewed_at ? new Date(r.reviewed_at).toLocaleDateString("ar-BH") : "—"}</div>
+        </div>
       </div>
       <div class="section-title">وصف الفعالية والأهداف</div>
       <div class="body">${escapeHtml(r.description)}</div>
+      ${attHtml}
       <div class="approval">
         <div class="section-title">اعتماد الإدارة</div>
-        <div>الاسم: <strong>${reviewer?.name ?? "—"}</strong></div>
+        <div>الاسم: <strong>${escapeHtml(reviewer?.name ?? "—")}</strong></div>
         <div style="margin-top:8pt">التوقيع: <span class="sig-line">${signature ? `<img src="${signature}" />` : "&nbsp;"}</span></div>
+        ${r.reviewer_note ? `<div style="margin-top:8pt"><strong>ملاحظة:</strong> ${escapeHtml(r.reviewer_note)}</div>` : ""}
       </div>
-      <div class="footer">${header.data?.footerNote ?? ""} · مُولّد بواسطة EduPulse | نبض · ${new Date().toLocaleDateString("ar-BH")}</div>
-      </body></html>`);
+      <div class="footer">${escapeHtml(header.data?.footerNote ?? "")} · مُولّد بواسطة EduPulse | نبض · ${new Date().toLocaleDateString("ar-BH")}</div>
+      </body></html>`;
+  }
+
+  async function printApproved(r: EventRow) {
+    const html = await buildPrintHtml(r);
+    const w = window.open("", "_blank", "width=900,height=1100");
+    if (!w) return;
+    w.document.write(html);
     w.document.close();
     w.focus();
     setTimeout(() => w.print(), 400);
+  }
+
+  async function getPdfBlob(r: EventRow): Promise<Blob> {
+    const html = await buildPrintHtml(r);
+    return new Blob([html], { type: "text/html;charset=utf-8" });
   }
 
   const canReview = isAdmin;
@@ -142,8 +179,8 @@ function EventsPage() {
           <h2 className="text-3xl font-bold flex items-center gap-2">
             <CalendarCheck2 className="h-7 w-7 text-primary" /> توثيق الفعاليات
             <FeatureHelp title="توثيق الفعاليات">
-              <p>المعلم يقدم اسم الفعالية ووصفها والأهداف. المدير/المساعد يعتمد أو يطلب تعديلات.</p>
-              <p>بعد الاعتماد، يمكن طباعة الوثيقة بترويسة المدرسة وتوقيع المعتمِد كسجل رسمي.</p>
+              <p>المعلم يقدّم اسم الفعالية، الفئة، التاريخ، المكان، الفئة المستهدفة، الوصف، والمرفقات (صور/مستندات).</p>
+              <p>المدير/المساعد يعتمد أو يطلب تعديلات. بعد الاعتماد تُطبع الوثيقة بترويسة المدرسة وتوقيع المعتمِد، ويمكن أرشفتها إلى OneDrive.</p>
             </FeatureHelp>
           </h2>
         </div>
@@ -158,17 +195,17 @@ function EventsPage() {
         </TabsList>
 
         {canReview && <TabsContent value="queue" className="space-y-2 mt-4">
-          {pending.map((r) => <EventCard key={r.id} row={r} teacherName={names.data?.get(r.teacher_id)?.name ?? "—"} canReview onPrint={printApproved} onDelete={() => del.mutate(r.id)} />)}
+          {pending.map((r) => <EventCard key={r.id} row={r} teacherName={names.data?.get(r.teacher_id)?.name ?? "—"} canReview canArchive={isAdmin} onPrint={printApproved} getPdfBlob={getPdfBlob} onDelete={() => del.mutate(r.id)} />)}
           {pending.length === 0 && <Empty text="لا توجد طلبات معلّقة" />}
         </TabsContent>}
 
         {canReview && <TabsContent value="all" className="space-y-2 mt-4">
-          {others.map((r) => <EventCard key={r.id} row={r} teacherName={names.data?.get(r.teacher_id)?.name ?? "—"} canReview={r.status === "pending" || r.status === "needs_edits"} onPrint={printApproved} onDelete={() => del.mutate(r.id)} />)}
+          {others.map((r) => <EventCard key={r.id} row={r} teacherName={names.data?.get(r.teacher_id)?.name ?? "—"} canReview={r.status === "pending" || r.status === "needs_edits"} canArchive={isAdmin} onPrint={printApproved} getPdfBlob={getPdfBlob} onDelete={() => del.mutate(r.id)} />)}
           {others.length === 0 && <Empty text="لا توجد فعاليات بعد" />}
         </TabsContent>}
 
         {isTeacher && <TabsContent value="mine" className="space-y-2 mt-4">
-          {mine.map((r) => <EventCard key={r.id} row={r} teacherName="أنا" canReview={false} onPrint={printApproved} onDelete={() => del.mutate(r.id)} showResubmit={r.status === "needs_edits"} onSaved={() => qc.invalidateQueries({ queryKey: ["events"] })} />)}
+          {mine.map((r) => <EventCard key={r.id} row={r} teacherName="أنا" canReview={false} canArchive={false} onPrint={printApproved} getPdfBlob={getPdfBlob} onDelete={() => del.mutate(r.id)} showResubmit={r.status === "needs_edits"} onSaved={() => qc.invalidateQueries({ queryKey: ["events"] })} />)}
           {mine.length === 0 && <Empty text="لم تقدّم فعاليات بعد" />}
         </TabsContent>}
       </Tabs>
@@ -185,29 +222,41 @@ function Empty({ text }: { text: string }) {
 }
 
 function EventCard({
-  row, teacherName, canReview, onPrint, onDelete, showResubmit, onSaved,
+  row, teacherName, canReview, canArchive, onPrint, getPdfBlob, onDelete, showResubmit, onSaved,
 }: {
   row: EventRow;
   teacherName: string;
   canReview: boolean;
+  canArchive: boolean;
   onPrint: (r: EventRow) => void;
+  getPdfBlob: (r: EventRow) => Promise<Blob>;
   onDelete: () => void;
   showResubmit?: boolean;
   onSaved?: () => void;
 }) {
   const st = STATUS_LABELS[row.status];
+  
   return (
     <div className="glass rounded-xl p-4 space-y-2">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <div className="font-semibold">{row.event_name}</div>
-          <div className="text-xs text-muted-foreground">{teacherName} · {new Date(row.submitted_at).toLocaleDateString("ar-BH")}</div>
+          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3">
+            <span>{teacherName}</span>
+            {row.category && <span>• {row.category}</span>}
+            {row.event_date && <span>• {new Date(row.event_date).toLocaleDateString("ar-BH")}</span>}
+            {row.location && <span>• {row.location}</span>}
+          </div>
         </div>
         <span className={`text-xs font-bold px-3 py-1 rounded-full ${st.chip}`}>{st.label}</span>
       </div>
       <details className="text-sm">
-        <summary className="cursor-pointer text-muted-foreground">عرض الوصف</summary>
-        <p className="mt-2 whitespace-pre-wrap">{row.description}</p>
+        <summary className="cursor-pointer text-muted-foreground">عرض التفاصيل</summary>
+        <div className="mt-2 space-y-2">
+          {row.target_audience && <p className="text-xs"><strong>الفئة المستهدفة:</strong> {row.target_audience}</p>}
+          <p className="whitespace-pre-wrap">{row.description}</p>
+          {row.attachments.length > 0 && <AttachmentsList atts={row.attachments} />}
+        </div>
       </details>
       {row.reviewer_note && (
         <p className="text-xs text-warning bg-warning/10 rounded p-2">ملاحظة المراجع: {row.reviewer_note}</p>
@@ -215,9 +264,43 @@ function EventCard({
       <div className="flex flex-wrap gap-2 pt-1">
         {canReview && <ReviewButtons id={row.id} />}
         {row.status === "approved" && <Button size="sm" variant="outline" className="gap-1" onClick={() => onPrint(row)}><Printer className="h-3.5 w-3.5" /> طباعة الوثيقة</Button>}
+        {row.status === "approved" && canArchive && !row.onedrive_url && (
+          <OneDriveArchiveButton
+            folder="events"
+            filename={`${row.event_name.replace(/[^\p{L}\p{N}_-]+/gu, "_")}.html`}
+            getBlob={() => getPdfBlob(row)}
+          />
+        )}
+        {row.onedrive_url && (
+          <a href={row.onedrive_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-success/15 text-success">
+            <ExternalLink className="h-3 w-3" /> على OneDrive
+          </a>
+        )}
         {showResubmit && onSaved && <ResubmitDialog row={row} onSaved={onSaved} />}
         <Button size="sm" variant="ghost" className="text-destructive" onClick={() => confirm("حذف؟") && onDelete()}><Trash2 className="h-3.5 w-3.5" /></Button>
       </div>
+    </div>
+  );
+}
+
+function AttachmentsList({ atts }: { atts: Attachment[] }) {
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  async function open(path: string) {
+    if (urls[path]) { window.open(urls[path], "_blank"); return; }
+    try {
+      const u = await getAttachmentUrl(path);
+      setUrls((p) => ({ ...p, [path]: u }));
+      window.open(u, "_blank");
+    } catch (e) { toast.error((e as Error).message); }
+  }
+  return (
+    <div className="flex flex-wrap gap-2 pt-1">
+      {atts.map((a) => (
+        <button key={a.url} type="button" onClick={() => open(a.url)} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-secondary hover:bg-secondary/70">
+          {a.type?.startsWith("image/") ? <ImageIcon className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
+          {a.name}
+        </button>
+      ))}
     </div>
   );
 }
@@ -248,27 +331,106 @@ function ReviewButtons({ id }: { id: string }) {
   );
 }
 
-function SubmitDialog({ onSaved, initial, buttonLabel }: { onSaved: () => void; initial?: { id: string; event_name: string; description: string }; buttonLabel?: string }) {
+type SubmitInitial = {
+  id: string; event_name: string; description: string;
+  event_date: string | null; category: string | null;
+  target_audience: string | null; location: string | null;
+  attachments: Attachment[];
+};
+
+function SubmitDialog({ onSaved, initial, buttonLabel }: { onSaved: () => void; initial?: SubmitInitial; buttonLabel?: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(initial?.event_name ?? "");
   const [desc, setDesc] = useState(initial?.description ?? "");
+  const [date, setDate] = useState(initial?.event_date ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "");
+  const [audience, setAudience] = useState(initial?.target_audience ?? "");
+  const [location, setLocation] = useState(initial?.location ?? "");
+  const [atts, setAtts] = useState<Attachment[]>(initial?.attachments ?? []);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const fn = useServerFn(submitEvent);
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      const uploaded: Attachment[] = [];
+      for (const f of Array.from(files)) {
+        if (f.size > 10 * 1024 * 1024) { toast.error(`${f.name} أكبر من 10MB`); continue; }
+        const path = await uploadAttachment(f, "events");
+        uploaded.push({ url: path, name: f.name, type: f.type });
+      }
+      setAtts((p) => [...p, ...uploaded]);
+      if (uploaded.length) toast.success(`تم رفع ${uploaded.length} ملف`);
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
+  }
+
   const m = useMutation({
-    mutationFn: async () => { await fn({ data: { id: initial?.id, event_name: name, description: desc } }); },
-    onSuccess: () => { toast.success(initial ? "تم إعادة الإرسال" : "تم الإرسال للاعتماد"); setOpen(false); if (!initial) { setName(""); setDesc(""); } onSaved(); },
+    mutationFn: async () => {
+      await fn({ data: {
+        id: initial?.id,
+        event_name: name,
+        description: desc,
+        event_date: date || null,
+        category: category || null,
+        target_audience: audience || null,
+        location: location || null,
+        attachments: atts,
+      }});
+    },
+    onSuccess: () => {
+      toast.success(initial ? "تم إعادة الإرسال" : "تم الإرسال للاعتماد");
+      setOpen(false);
+      if (!initial) { setName(""); setDesc(""); setDate(""); setCategory(""); setAudience(""); setLocation(""); setAtts([]); }
+      onSaved();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="gap-2 gradient-primary text-primary-foreground"><Plus className="h-4 w-4" /> {buttonLabel ?? "توثيق فعالية جديدة"}</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{initial ? "إعادة إرسال بعد التعديل" : "توثيق فعالية"}</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div><Label>اسم الفعالية</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="اليوم الرياضي 2026" /></div>
-          <div><Label>وصف الفعالية والأهداف</Label><Textarea rows={8} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="اكتب الأهداف، الفئة المستهدفة، الأنشطة، النتائج المرجوة..." /></div>
-          <Button onClick={() => m.mutate()} disabled={name.length < 2 || desc.length < 10 || m.isPending} className="w-full gradient-primary text-primary-foreground">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="md:col-span-2"><Label>اسم الفعالية *</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="اليوم الرياضي 2026" /></div>
+            <div>
+              <Label>الفئة</Label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
+                <option value="">— اختر —</option>
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><Label>تاريخ الفعالية</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+            <div><Label>المكان</Label><Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="الملعب / الصالة / القاعة" /></div>
+            <div><Label>الفئة المستهدفة</Label><Input value={audience} onChange={(e) => setAudience(e.target.value)} placeholder="طلاب الصف السادس" /></div>
+          </div>
+          <div><Label>وصف الفعالية والأهداف *</Label><Textarea rows={7} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="اكتب الأهداف، الأنشطة، النتائج المرجوة..." /></div>
+
+          <div>
+            <Label className="flex items-center gap-2"><Paperclip className="h-4 w-4" /> المرفقات (صور، PDF، مستندات — حتى 10MB لكل ملف)</Label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <input ref={fileRef} type="file" multiple accept="image/*,.pdf,.doc,.docx" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+              <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                {uploading ? "جارٍ الرفع..." : "إضافة ملفات"}
+              </Button>
+              {atts.map((a, i) => (
+                <span key={i} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-secondary">
+                  {a.type?.startsWith("image/") ? <ImageIcon className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
+                  {a.name}
+                  <button type="button" onClick={() => setAtts((p) => p.filter((_, j) => j !== i))} className="text-destructive ms-1"><X className="h-3 w-3" /></button>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <Button onClick={() => m.mutate()} disabled={name.length < 2 || desc.length < 10 || m.isPending || uploading} className="w-full gradient-primary text-primary-foreground">
             {m.isPending ? "..." : "إرسال للاعتماد"}
           </Button>
         </div>
@@ -278,5 +440,14 @@ function SubmitDialog({ onSaved, initial, buttonLabel }: { onSaved: () => void; 
 }
 
 function ResubmitDialog({ row, onSaved }: { row: EventRow; onSaved: () => void }) {
-  return <SubmitDialog onSaved={onSaved} initial={row} buttonLabel="تعديل وإعادة إرسال" />;
+  return <SubmitDialog onSaved={onSaved} initial={{
+    id: row.id,
+    event_name: row.event_name,
+    description: row.description,
+    event_date: row.event_date,
+    category: row.category,
+    target_audience: row.target_audience,
+    location: row.location,
+    attachments: row.attachments,
+  }} buttonLabel="تعديل وإعادة إرسال" />;
 }

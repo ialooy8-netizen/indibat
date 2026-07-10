@@ -263,43 +263,61 @@ export type Database = {
       event_submissions: {
         Row: {
           approved_pdf_url: string | null
+          attachments: Json
+          category: string | null
           created_at: string
           description: string
+          event_date: string | null
           event_name: string
           id: string
+          location: string | null
+          onedrive_url: string | null
           reviewed_at: string | null
           reviewer_id: string | null
           reviewer_note: string | null
           status: string
           submitted_at: string
+          target_audience: string | null
           teacher_id: string
           updated_at: string
         }
         Insert: {
           approved_pdf_url?: string | null
+          attachments?: Json
+          category?: string | null
           created_at?: string
           description: string
+          event_date?: string | null
           event_name: string
           id?: string
+          location?: string | null
+          onedrive_url?: string | null
           reviewed_at?: string | null
           reviewer_id?: string | null
           reviewer_note?: string | null
           status?: string
           submitted_at?: string
+          target_audience?: string | null
           teacher_id: string
           updated_at?: string
         }
         Update: {
           approved_pdf_url?: string | null
+          attachments?: Json
+          category?: string | null
           created_at?: string
           description?: string
+          event_date?: string | null
           event_name?: string
           id?: string
+          location?: string | null
+          onedrive_url?: string | null
           reviewed_at?: string | null
           reviewer_id?: string | null
           reviewer_note?: string | null
           status?: string
           submitted_at?: string
+          target_audience?: string | null
           teacher_id?: string
           updated_at?: string
         }
