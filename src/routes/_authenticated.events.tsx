@@ -279,8 +279,6 @@ function EventCard({
         {showResubmit && onSaved && <ResubmitDialog row={row} onSaved={onSaved} />}
         <Button size="sm" variant="ghost" className="text-destructive" onClick={() => confirm("حذف؟") && onDelete()}><Trash2 className="h-3.5 w-3.5" /></Button>
       </div>
-      {/* hidden helper: keep setUrlFn referenced for future use */}
-      <span className="hidden" data-fn={setUrlFn ? "1" : "0"} />
     </div>
   );
 }
