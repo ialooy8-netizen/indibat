@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CalendarCheck2, Plus, Printer, Check, X, RefreshCcw, Trash2, Paperclip, Upload, Loader2, Image as ImageIcon, FileText, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { submitEvent, reviewEvent, setEventOneDriveUrl } from "@/lib/events.functions";
+import { submitEvent, reviewEvent } from "@/lib/events.functions";
 import { FeatureHelp } from "@/components/app/FeatureHelp";
 import { uploadAttachment, getAttachmentUrl } from "@/lib/storage";
 import { OneDriveArchiveButton } from "@/components/app/OneDriveArchiveButton";
