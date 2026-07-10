@@ -235,7 +235,7 @@ function EventCard({
   onSaved?: () => void;
 }) {
   const st = STATUS_LABELS[row.status];
-  const setUrlFn = useServerFn(setEventOneDriveUrl);
+  void showResubmit; void onSaved;
   return (
     <div className="glass rounded-xl p-4 space-y-2">
       <div className="flex flex-wrap items-start justify-between gap-2">
